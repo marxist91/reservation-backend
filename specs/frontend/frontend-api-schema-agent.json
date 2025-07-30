@@ -1,0 +1,180 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "API Système de Réservation - Frontend (agent)",
+    "version": "1.0.0"
+  },
+  "paths": {},
+  "components": {
+    "schemas": {
+      "Reservation": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "description": "Identifiant unique de la réservation"
+          },
+          "user_id": {
+            "type": "integer",
+            "description": "ID de l'utilisateur ayant créé la réservation"
+          },
+          "room_id": {
+            "type": "integer",
+            "description": "ID de la salle réservée"
+          },
+          "date": {
+            "type": "string",
+            "format": "date",
+            "description": "Date de la réservation (YYYY-MM-DD)"
+          },
+          "heure_debut": {
+            "type": "string",
+            "format": "time",
+            "description": "Heure de début (HH:MM)"
+          },
+          "heure_fin": {
+            "type": "string",
+            "format": "time",
+            "description": "Heure de fin (HH:MM)"
+          },
+          "statut": {
+            "type": "string",
+            "enum": [
+              "validée",
+              "en_attente",
+              "annulée"
+            ],
+            "description": "Statut de la réservation"
+          },
+          "equipements_attribues": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Liste des équipements attribués"
+          },
+          "responsable_id": {
+            "type": "integer",
+            "description": "ID du responsable assigné (optionnel)"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Date de création"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Date de dernière modification"
+          }
+        },
+        "required": [
+          "user_id",
+          "room_id",
+          "date",
+          "heure_debut",
+          "heure_fin"
+        ]
+      },
+      "User": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "nom": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "admin",
+              "responsable_salle",
+              "chef_service",
+              "utilisateur"
+            ]
+          }
+        }
+      },
+      "Room": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "nom": {
+            "type": "string"
+          },
+          "capacite": {
+            "type": "integer"
+          }
+        }
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "string",
+            "description": "Message d'erreur"
+          },
+          "code": {
+            "type": "string",
+            "description": "Code d'erreur"
+          },
+          "details": {
+            "type": "object",
+            "description": "Détails supplémentaires de l'erreur"
+          }
+        }
+      },
+      "AuditLog": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "action": {
+            "type": "string",
+            "description": "Action effectuée"
+          },
+          "resource_type": {
+            "type": "string",
+            "description": "Type de ressource affectée"
+          },
+          "resource_id": {
+            "type": "integer",
+            "description": "ID de la ressource"
+          },
+          "user_id": {
+            "type": "integer",
+            "description": "ID de l'utilisateur ayant effectué l'action"
+          },
+          "snapshot_before": {
+            "type": "object",
+            "description": "État avant modification"
+          },
+          "snapshot_after": {
+            "type": "object",
+            "description": "État après modification"
+          },
+          "ip_address": {
+            "type": "string",
+            "description": "Adresse IP de l'utilisateur"
+          },
+          "user_agent": {
+            "type": "string",
+            "description": "User agent du navigateur"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      }
+    }
+  }
+}

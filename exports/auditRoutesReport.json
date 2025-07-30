@@ -1,0 +1,344 @@
+[
+  {
+    "method": "GET",
+    "route": "/",
+    "file": "audit.js",
+    "hasAudit": false,
+    "hasRBAC": false,
+    "isTested": true,
+    "isNamedOK": false
+  },
+  {
+    "method": "GET",
+    "route": "/filter",
+    "file": "audit.js",
+    "hasAudit": false,
+    "hasRBAC": false,
+    "isTested": true,
+    "isNamedOK": true
+  },
+  {
+    "method": "GET",
+    "route": "/stats/summary",
+    "file": "audit.js",
+    "hasAudit": false,
+    "hasRBAC": false,
+    "isTested": true,
+    "isNamedOK": true
+  },
+  {
+    "method": "GET",
+    "route": "/entity/:type/:id",
+    "file": "audit.js",
+    "hasAudit": false,
+    "hasRBAC": false,
+    "isTested": true,
+    "isNamedOK": false
+  },
+  {
+    "method": "GET",
+    "route": "/user-actions/:id",
+    "file": "audit.js",
+    "hasAudit": false,
+    "hasRBAC": false,
+    "isTested": true,
+    "isNamedOK": false
+  },
+  {
+    "method": "GET",
+    "route": "/advanced-search",
+    "file": "audit.js",
+    "hasAudit": false,
+    "hasRBAC": false,
+    "isTested": true,
+    "isNamedOK": true
+  },
+  {
+    "method": "GET",
+    "route": "/:id",
+    "file": "audit.js",
+    "hasAudit": false,
+    "hasRBAC": false,
+    "isTested": true,
+    "isNamedOK": false
+  },
+  {
+    "method": "POST",
+    "route": "/login",
+    "file": "auth.js",
+    "hasAudit": false,
+    "hasRBAC": false,
+    "isTested": false,
+    "isNamedOK": true
+  },
+  {
+    "method": "GET",
+    "route": "/meta",
+    "file": "meta.js",
+    "hasAudit": false,
+    "hasRBAC": false,
+    "isTested": false,
+    "isNamedOK": true
+  },
+  {
+    "method": "GET",
+    "route": "/version",
+    "file": "meta.js",
+    "hasAudit": false,
+    "hasRBAC": false,
+    "isTested": false,
+    "isNamedOK": true
+  },
+  {
+    "method": "GET",
+    "route": "/info",
+    "file": "meta.js",
+    "hasAudit": false,
+    "hasRBAC": false,
+    "isTested": false,
+    "isNamedOK": true
+  },
+  {
+    "method": "GET",
+    "route": "/self",
+    "file": "notifications.js",
+    "hasAudit": false,
+    "hasRBAC": false,
+    "isTested": false,
+    "isNamedOK": true
+  },
+  {
+    "method": "GET",
+    "route": "/user/:userId",
+    "file": "notifications.js",
+    "hasAudit": false,
+    "hasRBAC": false,
+    "isTested": false,
+    "isNamedOK": false
+  },
+  {
+    "method": "GET",
+    "route": "/",
+    "file": "notifications.js",
+    "hasAudit": false,
+    "hasRBAC": false,
+    "isTested": true,
+    "isNamedOK": false
+  },
+  {
+    "method": "DELETE",
+    "route": "/delete/:notificationId",
+    "file": "notifications.js",
+    "hasAudit": false,
+    "hasRBAC": false,
+    "isTested": false,
+    "isNamedOK": false
+  },
+  {
+    "method": "GET",
+    "route": "/occupation",
+    "file": "reservations.js",
+    "hasAudit": false,
+    "hasRBAC": false,
+    "isTested": false,
+    "isNamedOK": true
+  },
+  {
+    "method": "GET",
+    "route": "/occupation/roles",
+    "file": "reservations.js",
+    "hasAudit": false,
+    "hasRBAC": false,
+    "isTested": false,
+    "isNamedOK": true
+  },
+  {
+    "method": "GET",
+    "route": "/occupation/semaine",
+    "file": "reservations.js",
+    "hasAudit": false,
+    "hasRBAC": false,
+    "isTested": false,
+    "isNamedOK": true
+  },
+  {
+    "method": "GET",
+    "route": "/all",
+    "file": "reservations.js",
+    "hasAudit": false,
+    "hasRBAC": false,
+    "isTested": false,
+    "isNamedOK": true
+  },
+  {
+    "method": "POST",
+    "route": "/create",
+    "file": "reservations.js",
+    "hasAudit": false,
+    "hasRBAC": false,
+    "isTested": false,
+    "isNamedOK": true
+  },
+  {
+    "method": "PUT",
+    "route": "/assign/:id",
+    "file": "reservations.js",
+    "hasAudit": false,
+    "hasRBAC": false,
+    "isTested": false,
+    "isNamedOK": false
+  },
+  {
+    "method": "PUT",
+    "route": "/update/:id",
+    "file": "reservations.js",
+    "hasAudit": false,
+    "hasRBAC": false,
+    "isTested": false,
+    "isNamedOK": false
+  },
+  {
+    "method": "GET",
+    "route": "/ping",
+    "file": "rooms.js",
+    "hasAudit": false,
+    "hasRBAC": false,
+    "isTested": false,
+    "isNamedOK": true
+  },
+  {
+    "method": "POST",
+    "route": "/admin-only",
+    "file": "rooms.js",
+    "hasAudit": false,
+    "hasRBAC": false,
+    "isTested": false,
+    "isNamedOK": true
+  },
+  {
+    "method": "GET",
+    "route": "/responsables",
+    "file": "rooms.js",
+    "hasAudit": false,
+    "hasRBAC": false,
+    "isTested": false,
+    "isNamedOK": true
+  },
+  {
+    "method": "GET",
+    "route": "/overview",
+    "file": "rooms.js",
+    "hasAudit": false,
+    "hasRBAC": false,
+    "isTested": false,
+    "isNamedOK": true
+  },
+  {
+    "method": "GET",
+    "route": "/:id/planning",
+    "file": "rooms.js",
+    "hasAudit": false,
+    "hasRBAC": false,
+    "isTested": false,
+    "isNamedOK": false
+  },
+  {
+    "method": "GET",
+    "route": "/disponibles",
+    "file": "rooms.js",
+    "hasAudit": false,
+    "hasRBAC": false,
+    "isTested": false,
+    "isNamedOK": true
+  },
+  {
+    "method": "GET",
+    "route": "/dashboard",
+    "file": "rooms.js",
+    "hasAudit": false,
+    "hasRBAC": false,
+    "isTested": false,
+    "isNamedOK": true
+  },
+  {
+    "method": "GET",
+    "route": "/stats",
+    "file": "rooms.js",
+    "hasAudit": false,
+    "hasRBAC": false,
+    "isTested": true,
+    "isNamedOK": true
+  },
+  {
+    "method": "GET",
+    "route": "/stats/by-hour",
+    "file": "rooms.js",
+    "hasAudit": false,
+    "hasRBAC": false,
+    "isTested": false,
+    "isNamedOK": true
+  },
+  {
+    "method": "GET",
+    "route": "/stats/roles",
+    "file": "rooms.js",
+    "hasAudit": false,
+    "hasRBAC": false,
+    "isTested": false,
+    "isNamedOK": true
+  },
+  {
+    "method": "GET",
+    "route": "/stats/semaine",
+    "file": "rooms.js",
+    "hasAudit": false,
+    "hasRBAC": false,
+    "isTested": false,
+    "isNamedOK": true
+  },
+  {
+    "method": "DELETE",
+    "route": "/delete/:roomId",
+    "file": "rooms.js",
+    "hasAudit": false,
+    "hasRBAC": false,
+    "isTested": false,
+    "isNamedOK": false
+  },
+  {
+    "method": "GET",
+    "route": "/:id",
+    "file": "rooms.js",
+    "hasAudit": false,
+    "hasRBAC": false,
+    "isTested": true,
+    "isNamedOK": false
+  },
+  {
+    "method": "GET",
+    "route": "/registry",
+    "file": "users.js",
+    "hasAudit": false,
+    "hasRBAC": false,
+    "isTested": false,
+    "isNamedOK": true
+  },
+  {
+    "method": "POST",
+    "route": "/register",
+    "file": "users.js",
+    "hasAudit": false,
+    "hasRBAC": false,
+    "isTested": false,
+    "isNamedOK": true
+  },
+  {
+    "method": "PUT",
+    "route": "/update/:userId",
+    "file": "users.js",
+    "hasAudit": false,
+    "hasRBAC": false,
+    "isTested": false,
+    "isNamedOK": false
+  }
+]

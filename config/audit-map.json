@@ -1,0 +1,284 @@
+{
+  "audit_map": {
+    "version": "1.0.0",
+    "generated_at": "2025-01-25T12:00:00Z",
+    "description": "Matrice d'audit des routes critiques pour le système de réservation",
+    "critical_routes": {
+      "PUT /api/reservations/validate/:id": {
+        "action": "VALIDATE_RESERVATION",
+        "resource_type": "Reservation",
+        "sensitivity": "medium",
+        "rbac": {
+          "required_roles": ["admin", "responsable_salle", "chef_service"],
+          "action_code": "VALIDATE_RESERVATION",
+          "resource": "reservation"
+        },
+        "audit": {
+          "requires_snapshot": true,
+          "log_level": "INFO",
+          "retention_days": 90,
+          "fields_tracked": [
+            "statut",
+            "validated_by",
+            "validation_timestamp"
+          ]
+        },
+        "business_impact": "medium",
+        "compliance": ["SOX", "GDPR"],
+        "notifications": false
+      },
+      "DELETE /api/reservations/delete/:id": {
+        "action": "DELETE_RESERVATION",
+        "resource_type": "Reservation",
+        "sensitivity": "high",
+        "rbac": {
+          "required_roles": ["admin"],
+          "action_code": "DELETE_RESERVATION",
+          "resource": "reservation"
+        },
+        "audit": {
+          "requires_snapshot": true,
+          "log_level": "CRITICAL",
+          "retention_days": 2555,
+          "fields_tracked": [
+            "all_fields",
+            "deleted_by",
+            "deletion_reason",
+            "cascade_effects"
+          ]
+        },
+        "business_impact": "high",
+        "compliance": ["SOX", "GDPR", "PCI"],
+        "notifications": true,
+        "approval_required": true,
+        "critical": true
+      },
+      "PUT /api/reservations/assign/:id": {
+        "action": "ASSIGN_RESPONSABLE",
+        "resource_type": "Reservation",
+        "sensitivity": "medium",
+        "rbac": {
+          "required_roles": ["admin"],
+          "action_code": "ASSIGN_RESPONSABLE",
+          "resource": "reservation"
+        },
+        "audit": {
+          "requires_snapshot": true,
+          "log_level": "INFO",
+          "retention_days": 180,
+          "fields_tracked": [
+            "responsable_id",
+            "previous_responsable_id",
+            "assigned_by",
+            "assignment_timestamp"
+          ]
+        },
+        "business_impact": "medium",
+        "compliance": ["SOX"],
+        "notifications": false
+      },
+      "PUT /api/reservations/update/:id": {
+        "action": "UPDATE_RESERVATION",
+        "resource_type": "Reservation",
+        "sensitivity": "medium",
+        "rbac": {
+          "required_roles": ["admin", "responsable_salle", "chef_service"],
+          "action_code": "UPDATE_RESERVATION",
+          "resource": "reservation"
+        },
+        "audit": {
+          "requires_snapshot": true,
+          "log_level": "INFO",
+          "retention_days": 365,
+          "fields_tracked": [
+            "statut",
+            "date",
+            "heure_debut",
+            "heure_fin",
+            "equipements_attribues",
+            "modified_by"
+          ]
+        },
+        "business_impact": "medium",
+        "compliance": ["GDPR"],
+        "notifications": true,
+        "email_notifications": true
+      },
+      "POST /api/reservations/create": {
+        "action": "CREATE_RESERVATION",
+        "resource_type": "Reservation",
+        "sensitivity": "medium",
+        "rbac": {
+          "required_roles": ["admin", "responsable_salle", "chef_service", "utilisateur"],
+          "action_code": "CREATE_RESERVATION",
+          "resource": "reservation"
+        },
+        "audit": {
+          "requires_snapshot": false,
+          "log_level": "INFO",
+          "retention_days": 365,
+          "fields_tracked": [
+            "user_id",
+            "room_id",
+            "date",
+            "heure_debut",
+            "heure_fin",
+            "statut",
+            "created_by"
+          ]
+        },
+        "business_impact": "low",
+        "compliance": ["GDPR"],
+        "notifications": false
+      }
+    },
+    "audit_policies": {
+      "default_retention": 365,
+      "critical_retention": 2555,
+      "snapshot_storage": "encrypted",
+      "log_format": "JSON",
+      "real_time_monitoring": true,
+      "anomaly_detection": true,
+      "compliance_reporting": true
+    },
+    "rbac_matrix": {
+      "admin": {
+        "can_validate": true,
+        "can_delete": true,
+        "can_assign": true,
+        "can_update": true,
+        "can_create": true,
+        "can_view_all": true
+      },
+      "responsable_salle": {
+        "can_validate": true,
+        "can_delete": false,
+        "can_assign": false,
+        "can_update": true,
+        "can_create": true,
+        "can_view_filtered": true
+      },
+      "chef_service": {
+        "can_validate": true,
+        "can_delete": false,
+        "can_assign": false,
+        "can_update": true,
+        "can_create": true,
+        "can_view_filtered": true
+      },
+      "utilisateur": {
+        "can_validate": false,
+        "can_delete": false,
+        "can_assign": false,
+        "can_update": false,
+        "can_create": true,
+        "can_view_own": true
+      }
+    },
+    "monitoring_alerts": {
+      "high_frequency_deletes": {
+        "threshold": 5,
+        "time_window": "1h",
+        "action": "block_and_alert"
+      },
+      "unauthorized_access_attempts": {
+        "threshold": 3,
+        "time_window": "5m",
+        "action": "alert_security_team"
+      },
+      "bulk_status_changes": {
+        "threshold": 10,
+        "time_window": "10m",
+        "action": "flag_for_review"
+      },
+      "after_hours_modifications": {
+        "time_range": "22:00-06:00",
+        "action": "require_justification"
+      }
+    },
+    "compliance_mappings": {
+      "SOX": {
+        "routes": [
+          "DELETE /api/reservations/delete/:id",
+          "PUT /api/reservations/validate/:id",
+          "PUT /api/reservations/assign/:id"
+        ],
+        "requirements": [
+          "audit_trail_immutable",
+          "segregation_of_duties",
+          "approval_workflows"
+        ]
+      },
+      "GDPR": {
+        "routes": [
+          "DELETE /api/reservations/delete/:id",
+          "PUT /api/reservations/update/:id",
+          "POST /api/reservations/create"
+        ],
+        "requirements": [
+          "data_processing_consent",
+          "right_to_erasure",
+          "data_portability"
+        ]
+      },
+      "PCI": {
+        "routes": [
+          "DELETE /api/reservations/delete/:id"
+        ],
+        "requirements": [
+          "secure_deletion",
+          "access_controls",
+          "logging_monitoring"
+        ]
+      }
+    },
+    "risk_assessment": {
+      "DELETE /api/reservations/delete/:id": {
+        "risk_level": "HIGH",
+        "impact": "Perte de données business critiques",
+        "likelihood": "LOW",
+        "mitigation": [
+          "Double authentification requise",
+          "Backup automatique avant suppression",
+          "Période de grâce de 30 jours",
+          "Approbation hiérarchique"
+        ]
+      },
+      "PUT /api/reservations/update/:id": {
+        "risk_level": "MEDIUM",
+        "impact": "Modification de données métier",
+        "likelihood": "MEDIUM",
+        "mitigation": [
+          "Versioning des modifications",
+          "Notifications automatiques",
+          "Audit trail complet"
+        ]
+      },
+      "PUT /api/reservations/validate/:id": {
+        "risk_level": "MEDIUM",
+        "impact": "Validation non autorisée",
+        "likelihood": "LOW",
+        "mitigation": [
+          "Contrôle RBAC strict",
+          "Logs détaillés",
+          "Séparation des rôles"
+        ]
+      }
+    },
+    "integration_hooks": {
+      "webhook_endpoints": [
+        "https://monitoring.company.com/api/audit-events",
+        "https://compliance.company.com/api/sox-events"
+      ],
+      "siem_integration": {
+        "enabled": true,
+        "format": "CEF",
+        "endpoint": "syslog://siem.company.com:514"
+      },
+      "business_intelligence": {
+        "enabled": true,
+        "warehouse": "snowflake://bi.company.com/audit_db"
+      }
+    }
+  }
+}

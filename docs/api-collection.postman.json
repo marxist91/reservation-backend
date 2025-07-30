@@ -1,0 +1,739 @@
+{
+  "info": {
+    "name": "API Réservation de Salles",
+    "description": "Collection complète générée automatiquement",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3000"
+    },
+    {
+      "key": "userToken",
+      "value": "{{USER_JWT_TOKEN}}"
+    },
+    {
+      "key": "adminToken",
+      "value": "{{ADMIN_JWT_TOKEN}}"
+    }
+  ],
+  "item": [
+    {
+      "name": "META - Métadonnées et informations système",
+      "item": [
+        {
+          "name": "GET /meta",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/meta",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "meta"
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET /version",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/version",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "version"
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET /info",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/info",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "info"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "AUDIT - Système d'audit avancé et traçabilité",
+      "item": [
+        {
+          "name": "GET /entity/:type/:id",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/audit/entity/:type/:id",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "audit",
+                "entity",
+                ":type",
+                ":id"
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET /user/:id",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/audit/user/:id",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "audit",
+                "user",
+                ":id"
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET /actions",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/audit/actions",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "audit",
+                "actions"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "NOTIFICATIONS - Système de notifications en temps réel",
+      "item": [
+        {
+          "name": "GET /",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/notifications/",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "notifications"
+              ]
+            }
+          }
+        },
+        {
+          "name": "POST /",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/notifications/",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "notifications"
+              ]
+            }
+          }
+        },
+        {
+          "name": "PUT /:id/read",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/notifications/:id/read",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "notifications",
+                ":id",
+                "read"
+              ]
+            }
+          }
+        },
+        {
+          "name": "DELETE /:id",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/notifications/:id",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "notifications",
+                ":id"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "AUTH - Authentification et gestion des sessions",
+      "item": [
+        {
+          "name": "POST /register",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/register",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "register"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"user@example.com\",\n  \"password\": \"securePassword123\",\n  \"firstName\": \"John\",\n  \"lastName\": \"Doe\",\n  \"role\": \"USER\"\n}"
+            }
+          }
+        },
+        {
+          "name": "POST /login",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "login"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"user@example.com\",\n  \"password\": \"securePassword123\"\n}"
+            }
+          }
+        },
+        {
+          "name": "POST /logout",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/logout",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "logout"
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET /profile",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/profile",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "profile"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "USERS - Gestion des utilisateurs",
+      "item": [
+        {
+          "name": "GET /",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/users/",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "users"
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET /:id",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/users/:id",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                ":id"
+              ]
+            }
+          }
+        },
+        {
+          "name": "PUT /:id",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/users/:id",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                ":id"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstName\": \"John Updated\",\n  \"lastName\": \"Doe Updated\"\n}"
+            }
+          }
+        },
+        {
+          "name": "DELETE /:id",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/users/:id",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                ":id"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "RESERVATIONS - Gestion des réservations de salles",
+      "item": [
+        {
+          "name": "GET /",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/reservations/",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "reservations"
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET /:id",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/reservations/:id",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "reservations",
+                ":id"
+              ]
+            }
+          }
+        },
+        {
+          "name": "POST /",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/reservations/",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "reservations"
+              ]
+            }
+          }
+        },
+        {
+          "name": "PUT /:id",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/reservations/:id",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "reservations",
+                ":id"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"startTime\": \"2025-08-01T10:00:00.000Z\",\n  \"endTime\": \"2025-08-01T12:00:00.000Z\",\n  \"purpose\": \"Réunion équipe modifiée\"\n}"
+            }
+          }
+        },
+        {
+          "name": "DELETE /:id",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/reservations/:id",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "reservations",
+                ":id"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "ROOMS - Gestion des salles",
+      "item": [
+        {
+          "name": "GET /",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/rooms/",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "rooms"
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET /:id",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/rooms/:id",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "rooms",
+                ":id"
+              ]
+            }
+          }
+        },
+        {
+          "name": "POST /",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/rooms/",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "rooms"
+              ]
+            }
+          }
+        },
+        {
+          "name": "PUT /:id",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/rooms/:id",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "rooms",
+                ":id"
+              ]
+            }
+          }
+        },
+        {
+          "name": "DELETE /:id",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/rooms/:id",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "rooms",
+                ":id"
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET /:id/availability",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/rooms/:id/availability",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "rooms",
+                ":id",
+                "availability"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "SYSTEM - Endpoints système",
+      "item": [
+        {
+          "name": "GET /healthcheck",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/healthcheck",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "healthcheck"
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

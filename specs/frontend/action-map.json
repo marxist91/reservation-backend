@@ -1,0 +1,37 @@
+{
+  "valider_reservation": {
+    "method": "POST",
+    "endpoint": "/api/reservation/:id/validate",
+    "roles": ["admin", "agent"]
+  },
+  "supprimer_client": {
+    "method": "DELETE",
+    "endpoint": "/api/client/:id",
+  "roles": ["admin"]
+},
+"annuler_reservation": {
+    "method": "DELETE",
+    "endpoint": "/api/reservation/:id",
+    "roles": ["admin", "agent"]
+  },
+  "modifier_reservation": {
+    "method": "PUT",
+    "endpoint": "/api/reservation/:id",
+    "roles": ["admin", "agent"]
+  },
+  "creer_reservation": {
+    "method": "POST",
+    "endpoint": "/api/reservation",
+    "roles": ["admin", "agent"]
+  },
+  "lister_reservations": {
+    "method": "GET",
+    "endpoint": "/api/reservations",
+    "roles": ["admin", "agent", "client"]
+  },
+  "lister_clients": {
+    "method": "GET",
+    "endpoint": "/api/clients",
+    "roles": ["admin"]
+  }
+}

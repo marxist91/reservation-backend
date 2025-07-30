@@ -1,0 +1,1561 @@
+# OpenAPI Specification
+# Généré automatiquement le 2025-07-28T02:35:49.033Z
+
+openapi: 3.0.3
+info:
+  title: API Système de Réservation de Salles
+  description: Documentation OpenAPI générée automatiquement
+  version: 1.0.0
+  contact:
+    name: Équipe de développement
+    email: dev@company.com
+servers:
+  - url: http://localhost:3000
+    description: Serveur de développement
+  - url: https://api.booking.company.com
+    description: Serveur de production
+tags:
+  - name: meta
+    description: Métadonnées et informations système
+  - name: audit
+    description: Système d'audit avancé et traçabilité
+  - name: notifications
+    description: Système de notifications en temps réel
+  - name: auth
+    description: Authentification et gestion des sessions
+  - name: users
+    description: Gestion des utilisateurs
+  - name: reservations
+    description: Gestion des réservations de salles
+  - name: rooms
+    description: Gestion des salles
+  - name: system
+    description: Endpoints système
+paths:
+  /api/meta:
+    get:
+      tags:
+        - meta
+      summary: Informations complètes du système
+      description: Informations complètes du système - Métadonnées et informations système
+      responses:
+        '200':
+          description: Succès
+          content:
+            application/json:
+              schema:
+                type: object
+        '400':
+          description: Requête invalide
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Accès refusé
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Ressource non trouvée
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Erreur serveur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/version:
+    get:
+      tags:
+        - meta
+      summary: Version de l'API
+      description: Version de l'API - Métadonnées et informations système
+      responses:
+        '200':
+          description: Succès
+          content:
+            application/json:
+              schema:
+                type: object
+        '400':
+          description: Requête invalide
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Accès refusé
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Ressource non trouvée
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Erreur serveur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/info:
+    get:
+      tags:
+        - meta
+      summary: Informations de base
+      description: Informations de base - Métadonnées et informations système
+      responses:
+        '200':
+          description: Succès
+          content:
+            application/json:
+              schema:
+                type: object
+        '400':
+          description: Requête invalide
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Accès refusé
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Ressource non trouvée
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Erreur serveur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/audit/entity/{type}/{id}:
+    get:
+      tags:
+        - audit
+      summary: Audit d'une entité spécifique
+      description: Audit d'une entité spécifique - Système d'audit avancé et traçabilité
+      responses:
+        '200':
+          description: Succès
+          content:
+            application/json:
+              schema:
+                type: object
+        '400':
+          description: Requête invalide
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Accès refusé
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Ressource non trouvée
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Erreur serveur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: type
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+  /api/audit/user/{id}:
+    get:
+      tags:
+        - audit
+      summary: Historique des actions d'un utilisateur
+      description: >-
+        Historique des actions d'un utilisateur - Système d'audit avancé et
+        traçabilité
+      responses:
+        '200':
+          description: Succès
+          content:
+            application/json:
+              schema:
+                type: object
+        '400':
+          description: Requête invalide
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Accès refusé
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Ressource non trouvée
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Erreur serveur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+  /api/audit/actions:
+    get:
+      tags:
+        - audit
+      summary: Liste paginée des actions système
+      description: >-
+        Liste paginée des actions système - Système d'audit avancé et
+        traçabilité
+      responses:
+        '200':
+          description: Succès
+          content:
+            application/json:
+              schema:
+                type: object
+        '400':
+          description: Requête invalide
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Accès refusé
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Ressource non trouvée
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Erreur serveur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+        - bearerAuth: []
+  /api/notifications/:
+    get:
+      tags:
+        - notifications
+      summary: Récupérer les notifications utilisateur
+      description: >-
+        Récupérer les notifications utilisateur - Système de notifications en
+        temps réel
+      responses:
+        '200':
+          description: Succès
+          content:
+            application/json:
+              schema:
+                type: object
+        '400':
+          description: Requête invalide
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Accès refusé
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Ressource non trouvée
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Erreur serveur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    post:
+      tags:
+        - notifications
+      summary: Créer une nouvelle notification
+      description: Créer une nouvelle notification - Système de notifications en temps réel
+      responses:
+        '200':
+          description: Succès
+          content:
+            application/json:
+              schema:
+                type: object
+        '400':
+          description: Requête invalide
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Accès refusé
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Ressource non trouvée
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Erreur serveur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/notifications/{id}/read:
+    put:
+      tags:
+        - notifications
+      summary: Marquer comme lue
+      description: Marquer comme lue - Système de notifications en temps réel
+      responses:
+        '200':
+          description: Succès
+          content:
+            application/json:
+              schema:
+                type: object
+        '400':
+          description: Requête invalide
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Accès refusé
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Ressource non trouvée
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Erreur serveur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+  /api/notifications/{id}:
+    delete:
+      tags:
+        - notifications
+      summary: Supprimer une notification
+      description: Supprimer une notification - Système de notifications en temps réel
+      responses:
+        '200':
+          description: Succès
+          content:
+            application/json:
+              schema:
+                type: object
+        '400':
+          description: Requête invalide
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Accès refusé
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Ressource non trouvée
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Erreur serveur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+  /api/register:
+    post:
+      tags:
+        - auth
+      summary: Inscription d'un nouvel utilisateur
+      description: >-
+        Inscription d'un nouvel utilisateur - Authentification et gestion des
+        sessions
+      responses:
+        '200':
+          description: Succès
+          content:
+            application/json:
+              schema:
+                type: object
+        '400':
+          description: Requête invalide
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Accès refusé
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Ressource non trouvée
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Erreur serveur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/login:
+    post:
+      tags:
+        - auth
+      summary: Connexion utilisateur
+      description: Connexion utilisateur - Authentification et gestion des sessions
+      responses:
+        '200':
+          description: Succès
+          content:
+            application/json:
+              schema:
+                type: object
+        '400':
+          description: Requête invalide
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Accès refusé
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Ressource non trouvée
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Erreur serveur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/logout:
+    post:
+      tags:
+        - auth
+      summary: Déconnexion utilisateur
+      description: Déconnexion utilisateur - Authentification et gestion des sessions
+      responses:
+        '200':
+          description: Succès
+          content:
+            application/json:
+              schema:
+                type: object
+        '400':
+          description: Requête invalide
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Accès refusé
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Ressource non trouvée
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Erreur serveur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+        - bearerAuth: []
+  /api/profile:
+    get:
+      tags:
+        - auth
+      summary: Profil utilisateur connecté
+      description: Profil utilisateur connecté - Authentification et gestion des sessions
+      responses:
+        '200':
+          description: Succès
+          content:
+            application/json:
+              schema:
+                type: object
+        '400':
+          description: Requête invalide
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Accès refusé
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Ressource non trouvée
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Erreur serveur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+        - bearerAuth: []
+  /api/users/:
+    get:
+      tags:
+        - users
+      summary: Liste des utilisateurs
+      description: Liste des utilisateurs - Gestion des utilisateurs
+      responses:
+        '200':
+          description: Succès
+          content:
+            application/json:
+              schema:
+                type: object
+        '400':
+          description: Requête invalide
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Accès refusé
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Ressource non trouvée
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Erreur serveur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/users/{id}:
+    get:
+      tags:
+        - users
+      summary: Détails d'un utilisateur
+      description: Détails d'un utilisateur - Gestion des utilisateurs
+      responses:
+        '200':
+          description: Succès
+          content:
+            application/json:
+              schema:
+                type: object
+        '400':
+          description: Requête invalide
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Accès refusé
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Ressource non trouvée
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Erreur serveur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+    put:
+      tags:
+        - users
+      summary: Modifier un utilisateur
+      description: Modifier un utilisateur - Gestion des utilisateurs
+      responses:
+        '200':
+          description: Succès
+          content:
+            application/json:
+              schema:
+                type: object
+        '400':
+          description: Requête invalide
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Accès refusé
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Ressource non trouvée
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Erreur serveur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+    delete:
+      tags:
+        - users
+      summary: Supprimer un utilisateur
+      description: Supprimer un utilisateur - Gestion des utilisateurs
+      responses:
+        '200':
+          description: Succès
+          content:
+            application/json:
+              schema:
+                type: object
+        '400':
+          description: Requête invalide
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Accès refusé
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Ressource non trouvée
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Erreur serveur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+  /api/reservations/:
+    get:
+      tags:
+        - reservations
+      summary: Liste des réservations
+      description: Liste des réservations - Gestion des réservations de salles
+      responses:
+        '200':
+          description: Succès
+          content:
+            application/json:
+              schema:
+                type: object
+        '400':
+          description: Requête invalide
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Accès refusé
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Ressource non trouvée
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Erreur serveur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    post:
+      tags:
+        - reservations
+      summary: Créer une réservation
+      description: Créer une réservation - Gestion des réservations de salles
+      responses:
+        '200':
+          description: Succès
+          content:
+            application/json:
+              schema:
+                type: object
+        '400':
+          description: Requête invalide
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Accès refusé
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Ressource non trouvée
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Erreur serveur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/reservations/{id}:
+    get:
+      tags:
+        - reservations
+      summary: Détails d'une réservation
+      description: Détails d'une réservation - Gestion des réservations de salles
+      responses:
+        '200':
+          description: Succès
+          content:
+            application/json:
+              schema:
+                type: object
+        '400':
+          description: Requête invalide
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Accès refusé
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Ressource non trouvée
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Erreur serveur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+    put:
+      tags:
+        - reservations
+      summary: Modifier une réservation
+      description: Modifier une réservation - Gestion des réservations de salles
+      responses:
+        '200':
+          description: Succès
+          content:
+            application/json:
+              schema:
+                type: object
+        '400':
+          description: Requête invalide
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Accès refusé
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Ressource non trouvée
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Erreur serveur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+    delete:
+      tags:
+        - reservations
+      summary: Annuler une réservation
+      description: Annuler une réservation - Gestion des réservations de salles
+      responses:
+        '200':
+          description: Succès
+          content:
+            application/json:
+              schema:
+                type: object
+        '400':
+          description: Requête invalide
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Accès refusé
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Ressource non trouvée
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Erreur serveur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+  /api/rooms/:
+    get:
+      tags:
+        - rooms
+      summary: Liste des salles disponibles
+      description: Liste des salles disponibles - Gestion des salles
+      responses:
+        '200':
+          description: Succès
+          content:
+            application/json:
+              schema:
+                type: object
+        '400':
+          description: Requête invalide
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Accès refusé
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Ressource non trouvée
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Erreur serveur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    post:
+      tags:
+        - rooms
+      summary: Créer une nouvelle salle
+      description: Créer une nouvelle salle - Gestion des salles
+      responses:
+        '200':
+          description: Succès
+          content:
+            application/json:
+              schema:
+                type: object
+        '400':
+          description: Requête invalide
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Accès refusé
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Ressource non trouvée
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Erreur serveur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/rooms/{id}:
+    get:
+      tags:
+        - rooms
+      summary: Détails d'une salle
+      description: Détails d'une salle - Gestion des salles
+      responses:
+        '200':
+          description: Succès
+          content:
+            application/json:
+              schema:
+                type: object
+        '400':
+          description: Requête invalide
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Accès refusé
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Ressource non trouvée
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Erreur serveur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+    put:
+      tags:
+        - rooms
+      summary: Modifier une salle
+      description: Modifier une salle - Gestion des salles
+      responses:
+        '200':
+          description: Succès
+          content:
+            application/json:
+              schema:
+                type: object
+        '400':
+          description: Requête invalide
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Accès refusé
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Ressource non trouvée
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Erreur serveur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+    delete:
+      tags:
+        - rooms
+      summary: Supprimer une salle
+      description: Supprimer une salle - Gestion des salles
+      responses:
+        '200':
+          description: Succès
+          content:
+            application/json:
+              schema:
+                type: object
+        '400':
+          description: Requête invalide
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Accès refusé
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Ressource non trouvée
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Erreur serveur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+  /api/rooms/{id}/availability:
+    get:
+      tags:
+        - rooms
+      summary: Vérifier la disponibilité
+      description: Vérifier la disponibilité - Gestion des salles
+      responses:
+        '200':
+          description: Succès
+          content:
+            application/json:
+              schema:
+                type: object
+        '400':
+          description: Requête invalide
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Accès refusé
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Ressource non trouvée
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Erreur serveur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+  /api/healthcheck:
+    get:
+      tags:
+        - system
+      summary: Vérification de l'état du serveur
+      description: Vérification de l'état du serveur - Endpoints système
+      responses:
+        '200':
+          description: Succès
+          content:
+            application/json:
+              schema:
+                type: object
+        '400':
+          description: Requête invalide
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Accès refusé
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Ressource non trouvée
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Erreur serveur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        firstName:
+          type: string
+        lastName:
+          type: string
+        role:
+          type: string
+          enum:
+            - USER
+            - ADMIN
+        isActive:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    Room:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        capacity:
+          type: integer
+        description:
+          type: string
+        equipment:
+          type: array
+          items:
+            type: string
+        isActive:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    Reservation:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        userId:
+          type: string
+          format: uuid
+        roomId:
+          type: string
+          format: uuid
+        startTime:
+          type: string
+          format: date-time
+        endTime:
+          type: string
+          format: date-time
+        purpose:
+          type: string
+        status:
+          type: string
+          enum:
+            - PENDING
+            - CONFIRMED
+            - CANCELLED
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+        message:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+    PaginatedResponse:
+      type: object
+      properties:
+        data:
+          type: array
+        pagination:
+          type: object
+          properties:
+            page:
+              type: integer
+            limit:
+              type: integer
+            total:
+              type: integer
+            totalPages:
+              type: integer
