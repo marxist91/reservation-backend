@@ -1,0 +1,14 @@
+[
+  {
+    "action": "login",
+    "endpoint": "/api/auth/login",
+    "method": "POST",
+    "role": "public"
+  },
+  {
+    "action": "bookSlot",
+    "endpoint": "/api/reservations",
+    "method": "POST",
+    "role": "user"
+  }
+]

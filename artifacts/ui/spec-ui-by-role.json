@@ -1,0 +1,20 @@
+{
+  "public": [
+    {
+      "action": "login",
+      "endpoint": "/api/auth/login",
+      "method": "POST",
+      "domain": "auth",
+      "operation": "loginUser"
+    }
+  ],
+  "admin": [
+    {
+      "action": "bookSlot",
+      "endpoint": "/api/reservations",
+      "method": "POST",
+      "domain": "reservations",
+      "operation": "createReservation"
+    }
+  ]
+}

@@ -10,7 +10,10 @@
     "test:unit": "jest --testPathPattern=tests/unit",
     "test:integration": "jest --testPathPattern=tests/integration",
     "test:coverage": "jest --coverage",
-    "test:watch": "jest --watch"
+    "test:watch": "jest --watch",
+     "generate:artefacts": "node scripts/generate-artefacts.js",
+      "dashboard": "node scripts/run-dashboard.js"
+
   },
   "dependencies": {
     "express": "^4.18.2",

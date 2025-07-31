@@ -1,0 +1,18 @@
+{
+  "totalActions": 12,
+  "coveredByUI": 9,
+  "uncovered": [
+    {
+      "action": "deleteUser",
+      "endpoint": "/api/users/delete"
+    },
+    {
+      "action": "exportReport",
+      "endpoint": "/api/admin/export"
+    },
+    {
+      "action": "resetQuota",
+      "endpoint": "/api/quotas/reset"
+    }
+  ]
+}

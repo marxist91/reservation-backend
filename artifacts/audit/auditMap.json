@@ -1,0 +1,22 @@
+{
+  "criticalMutations": [
+    {
+      "path": "/api/users/update",
+      "method": "PATCH",
+      "secured": true,
+      "testCovered": true
+    },
+    {
+      "path": "/api/users/delete",
+      "method": "DELETE",
+      "secured": true,
+      "testCovered": false
+    }
+  ],
+  "warnings": [
+    {
+      "path": "/api/users/delete",
+      "message": "Mutation critique sans test de couverture"
+    }
+  ]
+}

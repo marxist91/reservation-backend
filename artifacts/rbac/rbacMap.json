@@ -1,0 +1,25 @@
+{
+  "auth": {
+    "public": [
+      {
+        "path": "/api/auth/register",
+        "method": "POST",
+        "operation": "registerUser"
+      },
+      {
+        "path": "/api/auth/login",
+        "method": "POST",
+        "operation": "loginUser"
+      }
+    ]
+  },
+  "reservations": {
+    "admin": [
+      {
+        "path": "/api/reservations",
+        "method": "POST",
+        "operation": "createReservation"
+      }
+    ]
+  }
+}
