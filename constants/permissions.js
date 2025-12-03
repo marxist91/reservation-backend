@@ -13,10 +13,7 @@ exports.RESERVATION_STATUTS = [
 ];
 
 exports.ROLE_LEVEL = {
-  super_admin: 5,
-  admin: 4,
-  directeur: 3,
-  chef_service: 2,
+  admin: 2,
   responsable: 1,
   user: 0
 };

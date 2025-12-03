@@ -17,7 +17,7 @@ const sendNotification = require("../utils/sendNotification");
 const sendEmail = require("../services/mailer");
 const ACTIONS = require("../constants/actions");
 
-const safeResponse = require("../utils/safeResponse");
+import safeResponse from "../utils/safeResponse";
 
 /**
  * @swagger
@@ -564,59 +564,71 @@ router.get("/all", authMiddleware, verifyRole(ROLES_RESERVATION_VIEW), async (re
  *         description: Conflit - salle déjà réservée
  */
 router.post("/create", authMiddleware, verifyMinimumRole("user"), async (req, res) => {
-  const { room_id, date, heure_debut, heure_fin, statut, equipements_attribues } = req.body;
+  const { room_id, date, heure_debut, heure_fin, statut, equipements_attribues, motif, nombre_participants } = req.body;
   const user_id = req.user.id;
 
   try {
     if (!room_id || !date || !heure_debut || !heure_fin) {
-      return res.status(400).json({ error: "a?? Paramètres requis manquants" });
+      return res.status(400).json({ error: "Paramètres requis manquants" });
     }
 
-    if (!horairesValides(heure_debut, heure_fin)) {
+    // Construction des objets Date
+    const startDateTime = new Date(`${date}T${heure_debut}`);
+    const endDateTime = new Date(`${date}T${heure_fin}`);
+
+    if (isNaN(startDateTime.getTime()) || isNaN(endDateTime.getTime())) {
+      return res.status(400).json({ error: "Format de date ou d'heure invalide" });
+    }
+
+    if (endDateTime <= startDateTime) {
       return res.status(400).json({
-        error: "a?? Créneau invalide : l'heure de fin doit être après l'heure de début"
+        error: "Créneau invalide : l'heure de fin doit être après l'heure de début"
       });
     }
 
-    if (!dureeMinimale(heure_debut, heure_fin)) {
+    // Vérification de la durée minimale (30 min)
+    const durationMinutes = (endDateTime - startDateTime) / (1000 * 60);
+    if (durationMinutes < 30) {
       return res.status(400).json({
-        error: "a?? Durée trop courte : minimum 30 minutes requises"
+        error: "Durée trop courte : minimum 30 minutes requises"
       });
     }
 
+    // Vérification des chevauchements
     const chevauchement = await Reservation.findOne({
       where: {
         room_id,
-        date,
+        statut: { [Op.ne]: 'annulee' },
         [Op.or]: [
-          { heure_debut: { [Op.between]: [heure_debut, heure_fin] } },
-          { heure_fin: { [Op.between]: [heure_debut, heure_fin] } },
           {
-            [Op.and]: [
-              { heure_debut: { [Op.lte]: heure_debut } },
-              { heure_fin: { [Op.gte]: heure_fin } }
-            ]
+            date_debut: {
+              [Op.lt]: endDateTime
+            },
+            date_fin: {
+              [Op.gt]: startDateTime
+            }
           }
         ]
       }
     });
 
     if (chevauchement) {
-      return res.status(409).json({ error: "a?? La salle est déjà réservée à ce créneau." });
+      return res.status(409).json({ error: "La salle est déjà réservée à ce créneau." });
     }
 
     const nouvelleReservation = await Reservation.create({
       user_id,
       room_id,
-      date,
-      heure_debut,
-      heure_fin,
+      date_debut: startDateTime,
+      date_fin: endDateTime,
       statut: statut ?? "en_attente",
-      equipements_attribues
+      equipements_supplementaires: equipements_attribues,
+      motif: motif || "Réunion",
+      nombre_participants: nombre_participants || 1
     });
 
     return res.status(201).json({
-      message: "a?? Réservation créée",
+      message: "Réservation créée",
       reservation: nouvelleReservation
     });
   } catch (error) {
