@@ -1,5 +1,4 @@
 // middleware/errorHandler.js
-const logger = require('../helpers/logger');
 
 // Classes d'erreurs personnalisées
 class AppError extends Error {
@@ -127,7 +126,7 @@ const sendErrorProd = (err, res) => {
     res.status(err.statusCode).json(response);
   } else {
     // Erreurs de programmation : ne pas exposer les détails
-    logger.error('ERROR 💥', err);
+    console.error('ERROR 💥', err);
     
     res.status(500).json({
       success: false,
@@ -145,7 +144,7 @@ const globalErrorHandler = (err, req, res, next) => {
   err.status = err.status || 'error';
 
   // Log de l'erreur
-  logger.error(`Error ${err.statusCode}: ${err.message}`, {
+  console.error(`Error ${err.statusCode}: ${err.message}`, {
     url: req.originalUrl,
     method: req.method,
     ip: req.ip,
@@ -194,7 +193,7 @@ const notFound = (req, res, next) => {
 
 // Gestionnaire pour les promesses rejetées non capturées
 process.on('unhandledRejection', (err, promise) => {
-  logger.error('UNHANDLED PROMISE REJECTION! 💥 Shutting down...', {
+  console.error('UNHANDLED PROMISE REJECTION! 💥 Shutting down...', {
     error: err.message,
     stack: err.stack
   });
@@ -204,7 +203,7 @@ process.on('unhandledRejection', (err, promise) => {
 
 // Gestionnaire pour les exceptions non capturées
 process.on('uncaughtException', (err) => {
-  logger.error('UNCAUGHT EXCEPTION! 💥 Shutting down...', {
+  console.error('UNCAUGHT EXCEPTION! 💥 Shutting down...', {
     error: err.message,
     stack: err.stack
   });
@@ -223,51 +222,3 @@ module.exports = {
   catchAsync,
   notFound
 };
-
-// helpers/logger.js - Système de logging
-const winston = require('winston');
-const path = require('path');
-
-// Configuration des formats de log
-const logFormat = winston.format.combine(
-  winston.format.timestamp({
-    format: 'YYYY-MM-DD HH:mm:ss'
-  }),
-  winston.format.errors({ stack: true }),
-  winston.format.json()
-);
-
-// Configuration du logger
-const logger = winston.createLogger({
-  level: process.env.LOG_LEVEL || 'info',
-  format: logFormat,
-  defaultMeta: { service: 'reservation-backend' },
-  transports: [
-    // Logs d'erreurs dans un fichier séparé
-    new winston.transports.File({
-      filename: path.join(__dirname, '../logs/error.log'),
-      level: 'error',
-      maxsize: 10485760, // 10MB
-      maxFiles: 5
-    }),
-    
-    // Tous les logs dans combined.log
-    new winston.transports.File({
-      filename: path.join(__dirname, '../logs/combined.log'),
-      maxsize: 10485760, // 10MB
-      maxFiles: 5
-    })
-  ]
-});
-
-// En développement, aussi logger dans la console
-if (process.env.NODE_ENV !== 'production') {
-  logger.add(new winston.transports.Console({
-    format: winston.format.combine(
-      winston.format.colorize(),
-      winston.format.simple()
-    )
-  }));
-}
-
-module.exports = logger;

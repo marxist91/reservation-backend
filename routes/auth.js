@@ -27,7 +27,7 @@ const JWT_SECRET = process.env.JWT_SECRET;
 router.post('/register',
   validators.validateRegister,
   catchAsync(async (req, res, next) => {
-    const { firstName, lastName, email, password, role, department, phone } = req.body;
+    const { nom, prenom, email, password, role, poste, telephone } = req.body;
 
     const existingUser = await User.findOne({ where: { email } });
     if (existingUser) {
@@ -36,8 +36,8 @@ router.post('/register',
 
     const hashedPassword = await bcrypt.hash(password, 12);
     const user = await User.create({
-      firstName, lastName, email, password: hashedPassword,
-      role, department, phone
+      nom, prenom, email, password: hashedPassword,
+      role, poste, telephone
     });
 
     logger.info('Nouvel utilisateur enregistré', {
@@ -58,7 +58,7 @@ router.post('/register',
       data: {
         user: {
           id: user.id,
-          firstName, lastName, email, role, department, phone,
+          nom, prenom, email, role, poste, telephone,
           createdAt: user.createdAt
         },
         token
@@ -79,14 +79,14 @@ router.post('/login',
 
     const user = await User.findOne({
       where: { email },
-      attributes: ['id', 'firstName', 'lastName', 'email', 'password', 'role', 'department', 'phone', 'isActive', 'lastLoginAt']
+      attributes: ['id', 'nom', 'prenom', 'email', 'password', 'role', 'poste', 'telephone', 'actif']
     });
 
     if (!user || !(await bcrypt.compare(password, user.password))) {
       throw new AppError('Email ou mot de passe incorrect', 401, 'INVALID_CREDENTIALS');
     }
 
-    if (!user.isActive) {
+    if (!user.actif) {
       throw new AppError('Compte désactivé. Contactez un administrateur.', 403, 'ACCOUNT_DISABLED');
     }
 
@@ -102,21 +102,18 @@ router.post('/login',
       { expiresIn: JWT_EXPIRES_IN, issuer: JWT_ISSUER, audience: JWT_AUDIENCE }
     );
 
-    await user.update({ lastLoginAt: new Date() });
-
     res.json({
       success: true,
       message: 'Connexion réussie',
       data: {
         user: {
           id: user.id,
-          firstName: user.firstName,
-          lastName: user.lastName,
+          nom: user.nom,
+          prenom: user.prenom,
           email: user.email,
           role: user.role,
-          department: user.department,
-          phone: user.phone,
-          lastLoginAt: user.lastLoginAt
+          poste: user.poste,
+          telephone: user.telephone
         },
         token
       }

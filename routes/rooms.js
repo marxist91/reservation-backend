@@ -14,6 +14,65 @@ router.get("/ping", (req, res) => {
   return res.send("✅ Route rooms opérationnelle !");
 });
 
+// 📋 Liste de toutes les salles
+router.get("/", authMiddleware, verifyRole(ROLES_ROOM_VIEW), async (req, res) => {
+  try {
+    const rooms = await Room.findAll({
+      include: {
+        model: User,
+        as: "responsable",
+        attributes: ["id", "nom", "prenom", "email"]
+      },
+      order: [["nom", "ASC"]]
+    });
+
+    return res.json(rooms);
+  } catch (error) {
+    console.error("Erreur récupération salles:", error);
+    return res.status(500).json({
+      error: "Erreur serveur",
+      message: error.message
+    });
+  }
+});
+
+// ➕ Créer une nouvelle salle (admin/responsable uniquement)
+router.post("/", authMiddleware, verifyRole(["admin", "responsable"]), async (req, res) => {
+  try {
+    const { nom, description, capacite, equipements, batiment, etage, superficie, prix_heure, responsable_id, statut, image_url } = req.body;
+
+    // Validation minimale
+    if (!nom || !capacite || !prix_heure) {
+      return res.status(400).json({
+        error: "Champs requis manquants",
+        required: ["nom", "capacite", "prix_heure"]
+      });
+    }
+
+    const newRoom = await Room.create({
+      nom,
+      description,
+      capacite,
+      equipements,
+      batiment,
+      etage,
+      superficie,
+      prix_heure,
+      responsable_id: responsable_id || req.user.id,
+      statut: statut || 'disponible',
+      image_url
+    });
+
+    return res.status(201).json(newRoom);
+  } catch (error) {
+    console.error("Erreur création salle:", error);
+    return res.status(500).json({
+      error: "Erreur serveur",
+      message: error.message
+    });
+  }
+});
+
 // 🔧 Fonction utilitaire : regroupe les réservations en créneaux horaires
 const classerParCreneaux = (reservations) => {
   const planning = { matin: [], apres_midi: [], soir: [] };
@@ -260,7 +319,7 @@ router.get("/dashboard", authMiddleware, verifyRole(ROLES_ROOM_VIEW), async (req
   }
 });
 
-router.put( "/update/:roomId", authMiddleware,autoAudit({ action: "UPDATE_ROOM", cibleType: "Room" }), verifyRole(ROLES_ROOM_UPDATE), // ["admin", "responsable_salle"]
+router.put( "/update/:roomId", authMiddleware,autoAudit({ action: "UPDATE_ROOM", cibleType: "Room" }), verifyRole(["admin", "responsable"]), // admin ou responsable
   async (req, res) => {
     try {
       const { roomId } = req.params;
@@ -272,10 +331,12 @@ router.put( "/update/:roomId", authMiddleware,autoAudit({ action: "UPDATE_ROOM",
 
       req.auditSnapshot = salle.toJSON(); // 🧠 état avant modification
 
-      const { nom, capacite, responsable_id } = req.body;
+      const { nom, capacite, responsable_id, description, statut } = req.body;
       if (nom) salle.nom = nom;
       if (capacite) salle.capacite = capacite;
       if (responsable_id) salle.responsable_id = responsable_id;
+      if (description) salle.description = description;
+      if (statut) salle.statut = statut;
 
       await salle.save();
 

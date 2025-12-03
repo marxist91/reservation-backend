@@ -7,29 +7,31 @@ module.exports = (sequelize, DataTypes) => {
       // Association avec les réservations
       Room.hasMany(models.Reservation, {
         foreignKey: 'room_id',
-        as: 'roomReservations', // Alias plus spécifique pour éviter les conflits
-        onDelete: 'CASCADE',
-        onUpdate: 'CASCADE'
+        as: 'reservations',
+        onDelete: 'CASCADE'
       });
 
       // Association avec l'utilisateur responsable
       Room.belongsTo(models.User, {
         foreignKey: 'responsable_id',
-        as: 'responsable', // Alias plus spécifique
-        onDelete: 'RESTRICT', // Empêche la suppression si un responsable a des salles
-        onUpdate: 'CASCADE'
+        as: 'responsable',
+        onDelete: 'RESTRICT'
       });
     }
   }
 
   Room.init({
     nom: {
-      type: DataTypes.STRING,
+      type: DataTypes.STRING(100),
       allowNull: false,
       validate: {
         notEmpty: true,
         len: [1, 100]
       }
+    },
+    description: {
+      type: DataTypes.TEXT,
+      allowNull: true
     },
     capacite: {
       type: DataTypes.INTEGER,
@@ -40,35 +42,45 @@ module.exports = (sequelize, DataTypes) => {
       }
     },
     equipements: {
-      type: DataTypes.TEXT, // Changé en TEXT pour plus de flexibilité
+      type: DataTypes.JSON,
       allowNull: true,
       defaultValue: null
     },
+    batiment: {
+      type: DataTypes.STRING(50),
+      allowNull: true
+    },
+    etage: {
+      type: DataTypes.STRING(10),
+      allowNull: true
+    },
+    superficie: {
+      type: DataTypes.DECIMAL(8, 2),
+      allowNull: true
+    },
     responsable_id: {
       type: DataTypes.INTEGER,
-      allowNull: false,
+      allowNull: true,
       references: {
-        model: 'Users',
+        model: 'users',
         key: 'id'
       }
+    },
+    statut: {
+      type: DataTypes.ENUM('disponible', 'maintenance', 'indisponible'),
+      allowNull: false,
+      defaultValue: 'disponible'
+    },
+    image_url: {
+      type: DataTypes.STRING(255),
+      allowNull: true
     }
   }, {
     sequelize,
     modelName: 'Room',
-    tableName: 'Rooms',
-    timestamps: true, // Explicitement activé
-    indexes: [
-      {
-        fields: ['responsable_id']
-      },
-      {
-        fields: ['nom']
-      },
-      {
-        unique: true,
-        fields: ['nom'] // Nom unique pour éviter les doublons
-      }
-    ]
+    tableName: 'rooms',
+    underscored: false, // BDD utilise camelCase (createdAt) pas snake_case
+    timestamps: true
   });
 
   return Room;

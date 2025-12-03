@@ -1,13 +1,13 @@
-exports.USER_ROLES = [
+﻿exports.USER_ROLES = [
   "admin",
-  "responsable_salle",
-  "utilisateur"
+  "responsable",
+  "user"
 ];
 
 exports.RESERVATION_STATUTS = [
   "en_attente",
-  "validée",
-  "annulée"
+  "validee",
+  "annulee"
 ];
 
-exports.ROLES_RESERVATION_VALIDATION = ["admin", "responsable_salle"];
+exports.ROLES_RESERVATION_VALIDATION = ["admin", "responsable"];

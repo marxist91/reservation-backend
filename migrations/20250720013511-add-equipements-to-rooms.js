@@ -3,14 +3,19 @@
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
   async up(queryInterface, Sequelize) {
-    await queryInterface.addColumn('Rooms', 'equipements', {
-      type: Sequelize.STRING,
+    // Modifier le type de la colonne equipements de STRING vers JSON
+    await queryInterface.changeColumn('rooms', 'equipements', {
+      type: Sequelize.JSON,
       allowNull: true
     });
   },
 
   async down(queryInterface, Sequelize) {
-    await queryInterface.removeColumn('Rooms', 'equipements');
+    // Revenir à STRING
+    await queryInterface.changeColumn('rooms', 'equipements', {
+      type: Sequelize.STRING,
+      allowNull: true
+    });
   }
 };
 

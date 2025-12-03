@@ -1,4 +1,4 @@
-const { Sequelize } = require('sequelize');
+import { Sequelize } from 'sequelize';
 
 const sequelize = new Sequelize('reservation_salles', 'marcel_admin', 'Reservation2025!', {
   host: 'localhost',

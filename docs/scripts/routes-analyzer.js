@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 
-const fs = require('fs');
-const path = require('path');
-const { pathToRegexp } = require('path-to-regexp');
+import fs from 'fs';
+import path from 'path';
+import { pathToRegexp } from 'path-to-regexp';
 
 console.log('🔍 Analyse des routes en cours...\n');
 

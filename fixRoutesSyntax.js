@@ -1,5 +1,5 @@
-const fs = require("fs");
-const path = require("path");
+import fs from "fs";
+import path from "path";
 
 const routeDir = path.join(__dirname, "routes");
 const routeFiles = fs.readdirSync(routeDir).filter(f => f.endsWith(".js"));

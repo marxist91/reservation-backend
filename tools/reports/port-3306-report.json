@@ -1,0 +1,11 @@
+{
+  "port": 3307,
+  "status": "occupé",
+  "process": "inconnu",
+  "endpoints": [
+    {
+      "protocol": ""
+    }
+  ],
+  "fallbackUsed": true
+}

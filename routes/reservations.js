@@ -72,12 +72,12 @@ router.get("/occupation", authMiddleware, verifyRole(ROLES_ROOM_VIEW), async (re
   const { date, statut } = req.query;
   const dateCible = date || new Date().toISOString().slice(0, 10);
 
-  // 🔧 Créneaux d'ouverture configurés
+  // �??� creneaux d'ouverture configurés
   const heuresOuvertes = [
     "07:00","08:00","09:00", "10:00", "11:00", "12:00",
     "13:00", "14:00", "15:00", "16:00", "17:00","18:00","19:00"
   ];
-  const totalCréneaux = heuresOuvertes.length;
+  const totalcreneaux = heuresOuvertes.length;
 
   try {
     const rooms = await Room.findAll();
@@ -89,11 +89,11 @@ router.get("/occupation", authMiddleware, verifyRole(ROLES_ROOM_VIEW), async (re
         date: dateCible
       };
 
-      // ✅ Appliquer le filtre sur le statut si fourni
+      // a?? Appliquer le filtre sur le statut si fourni
       if (statut) {
         if (!RESERVATION_STATUTS.includes(statut)) {
           return res.status(400).json({
-            error: `⛔ Statut invalide. Autorisés : ${RESERVATION_STATUTS.join(", ")}`
+            error: `a?? Statut invalide. Autorisés : ${RESERVATION_STATUTS.join(", ")}`
           });
         }
         filtre.statut = statut;
@@ -104,17 +104,17 @@ router.get("/occupation", authMiddleware, verifyRole(ROLES_ROOM_VIEW), async (re
         attributes: ["heure_debut", "heure_fin"]
       });
 
-      let créneauxOccupés = 0;
+      let creneauxOccupés = 0;
 
       for (const r of reservations) {
         const idxDebut = heuresOuvertes.indexOf(r.heure_debut);
         const idxFin = heuresOuvertes.indexOf(r.heure_fin);
         if (idxDebut !== -1 && idxFin !== -1) {
-          créneauxOccupés += idxFin - idxDebut;
+          creneauxOccupés += idxFin - idxDebut;
         }
       }
 
-      const taux = totalCréneaux === 0 ? 0 : Math.round((créneauxOccupés / totalCréneaux) * 100);
+      const taux = totalcreneaux === 0 ? 0 : Math.round((creneauxOccupés / totalcreneaux) * 100);
 
       stats.push({
         id: room.id,
@@ -122,15 +122,15 @@ router.get("/occupation", authMiddleware, verifyRole(ROLES_ROOM_VIEW), async (re
         capacite: room.capacite,
         date: dateCible,
         statut: statut || "tous",
-        créneaux_disponibles: totalCréneaux,
-        créneaux_occupés: créneauxOccupés,
+        creneaux_disponibles: totalcreneaux,
+        creneaux_occupés: creneauxOccupés,
         taux_occupation: `${taux}%`
       });
     }
 
     return res.json(stats);
   } catch (error) {
-    console.error("❌ Erreur GET /api/reservations/occupation :", error);
+    console.error("a�? Erreur GET /api/reservations/occupation :", error);
     return res.status(500).json({ error: "Erreur serveur" });
   }
 });
@@ -186,7 +186,7 @@ router.put( "/validate/:id",authMiddleware, autoAudit({ action: "VALIDATE_RESERV
     try {
       const reservation = await Reservation.findByPk(id);
       if (!reservation) {
-        return res.status(404).json({ error: "📛 Réservation introuvable" });
+        return res.status(404).json({ error: "�??? Réservation introuvable" });
       }
 
       req.auditSnapshot = reservation.toJSON(); // état avant validation
@@ -196,7 +196,7 @@ router.put( "/validate/:id",authMiddleware, autoAudit({ action: "VALIDATE_RESERV
 
       return res.json({ success: true, updated: reservation }); // capté par autoAudit
     } catch (error) {
-      console.error("❌ Erreur PUT /reservations/validate/:id :", error);
+      console.error("a�? Erreur PUT /reservations/validate/:id :", error);
       res.status(500).json({ error: "Erreur serveur" });
     }
   }
@@ -236,7 +236,7 @@ router.get("/occupation/roles", authMiddleware, verifyRole(ROLES_ROOM_VIEW), asy
     "07:00","08:00","09:00", "10:00", "11:00", "12:00",
     "13:00", "14:00", "15:00", "16:00", "17:00","18:00","19:00"
   ];
-  const totalCréneaux = heuresOuvertes.length;
+  const totalcreneaux = heuresOuvertes.length;
 
   try {
     const rooms = await Room.findAll({
@@ -267,12 +267,12 @@ router.get("/occupation/roles", authMiddleware, verifyRole(ROLES_ROOM_VIEW), asy
         attributes: ["heure_debut", "heure_fin"]
       });
 
-      let créneauxOccupés = 0;
+      let creneauxOccupés = 0;
       for (const r of reservations) {
         const idxDebut = heuresOuvertes.indexOf(r.heure_debut);
         const idxFin = heuresOuvertes.indexOf(r.heure_fin);
         if (idxDebut !== -1 && idxFin !== -1) {
-          créneauxOccupés += idxFin - idxDebut;
+          creneauxOccupés += idxFin - idxDebut;
         }
       }
 
@@ -281,26 +281,26 @@ router.get("/occupation/roles", authMiddleware, verifyRole(ROLES_ROOM_VIEW), asy
           rôle: role,
           salles: 0,
           capacité_totale: 0,
-          occupation_créneaux: 0
+          occupation_creneaux: 0
         };
       }
 
       statsParRole[role].salles += 1;
       statsParRole[role].capacité_totale += room.capacite ?? 0;
-      statsParRole[role].occupation_créneaux += créneauxOccupés;
+      statsParRole[role].occupation_creneaux += creneauxOccupés;
     }
 
-    // 🧠 Calcul des taux
+    // �?�� Calcul des taux
     for (const role in statsParRole) {
-      const { salles, occupation_créneaux } = statsParRole[role];
-      const total = salles * totalCréneaux;
-      const taux = total > 0 ? Math.round((occupation_créneaux / total) * 100) : 0;
+      const { salles, occupation_creneaux } = statsParRole[role];
+      const total = salles * totalcreneaux;
+      const taux = total > 0 ? Math.round((occupation_creneaux / total) * 100) : 0;
       statsParRole[role].taux_occupation_moyen = `${taux}%`;
     }
 
     return res.json(Object.values(statsParRole));
   } catch (error) {
-    console.error("❌ Erreur GET /api/reservations/occupation/roles :", error);
+    console.error("a�? Erreur GET /api/reservations/occupation/roles :", error);
     return res.status(500).json({ error: "Erreur serveur" });
   }
 });
@@ -357,21 +357,21 @@ router.get("/occupation/semaine", authMiddleware, verifyRole(ROLES_ROOM_VIEW), a
 
         const reservations = await Reservation.findAll({ where: conditions, attributes: ["heure_debut", "heure_fin"] });
 
-        let créneauxOccupés = 0;
+        let creneauxOccupés = 0;
         for (const r of reservations) {
           const idxDebut = heuresOuvertes.indexOf(r.heure_debut);
           const idxFin = heuresOuvertes.indexOf(r.heure_fin);
           if (idxDebut !== -1 && idxFin !== -1) {
-            créneauxOccupés += idxFin - idxDebut;
+            creneauxOccupés += idxFin - idxDebut;
           }
         }
 
-        const totalCréneaux = heuresOuvertes.length;
-        const taux = totalCréneaux === 0 ? 0 : Math.round((créneauxOccupés / totalCréneaux) * 100);
+        const totalcreneaux = heuresOuvertes.length;
+        const taux = totalcreneaux === 0 ? 0 : Math.round((creneauxOccupés / totalcreneaux) * 100);
 
         historique.push({
           date: dateStr,
-          créneaux_occupés: créneauxOccupés,
+          creneaux_occupés: creneauxOccupés,
           taux_occupation: `${taux}%`
         });
       }
@@ -386,43 +386,43 @@ router.get("/occupation/semaine", authMiddleware, verifyRole(ROLES_ROOM_VIEW), a
 
     return res.json(stats);
   } catch (error) {
-    console.error("❌ Erreur GET /api/reservations/occupation/semaine :", error);
+    console.error("a�? Erreur GET /api/reservations/occupation/semaine :", error);
     return res.status(500).json({ error: "Erreur serveur" });
   }
 });
 
-// 🔹 GET /api/reservations : Vue filtrée + pagination
-// 🎨 Statuts UX + classe CSS
+// �??� GET /api/reservations : Vue filtrée + pagination
+// �??� Statuts UX + classe CSS
 const BADGES_STATUT = {
-  validée: { emoji: "🟢 validée", css: "row-validée" },
-  en_attente: { emoji: "🟡 en attente", css: "row-attente" },
-  annulée: { emoji: "🔴 annulée", css: "row-annulée" }
+  validée: { emoji: "�??� validée", css: "row-validée" },
+  en_attente: { emoji: "�??� en attente", css: "row-attente" },
+  annulée: { emoji: "�??� annulée", css: "row-annulée" }
 };
 
-// 👤 Icônes par rôle
+// �??� Icônes par rôle
 const ICONES_ROLE = {
-  admin: "👩‍💼 admin",
-  responsable_salle: "👨‍🔧 responsable",
-  utilisateur: "👤 utilisateur",
-  chef_service: "👨‍💼 chef de service"
+  admin: "�??�a?��??� admin",
+  responsable_salle: "�??�a?��??� responsable",
+  utilisateur: "�??� utilisateur",
+  chef_service: "�??�a?��??� chef de service"
 };
 
-// 🧠 Badge moment de la journée
+// �?�� Badge moment de la journée
 const badgeCreneau = (h) => {
-  if (h >= "06:00" && h <= "12:00") return "🌄 matin";
-  if (h >= "12:01" && h <= "18:00") return "🌇 après-midi";
-  if (h >= "18:01") return "🌙 soir";
-  return "❔ inconnu";
+  if (h >= "06:00" && h <= "12:00") return "�??? matin";
+  if (h >= "12:01" && h <= "18:00") return "�??? après-midi";
+  if (h >= "18:01") return "�??? soir";
+  return "a�? inconnu";
 };
 
-// ⏱️ Durée humaine
+// a��️ Durée humaine
 const calculerDurée = (debut, fin) => {
   const [h1, m1] = debut.split(":").map(Number);
   const [h2, m2] = fin.split(":").map(Number);
   const minutes = (h2 * 60 + m2) - (h1 * 60 + m1);
   const h = Math.floor(minutes / 60);
   const m = minutes % 60;
-  return `${h > 0 ? `${h}h` : ""}${m > 0 ? `${m}` : ""}${m > 0 ? "min" : ""}` || "—";
+  return `${h > 0 ? `${h}h` : ""}${m > 0 ? `${m}` : ""}${m > 0 ? "min" : ""}` || "a??";
 };
 
 /**
@@ -474,9 +474,9 @@ router.get("/all", authMiddleware, verifyRole(ROLES_RESERVATION_VIEW), async (re
     });
 
     const enrichies = reservations.map(r => {
-      const statObj = BADGES_STATUT[r.statut] || { emoji: `❔ ${r.statut}`, css: "row-inconnu" };
+      const statObj = BADGES_STATUT[r.statut] || { emoji: `a�? ${r.statut}`, css: "row-inconnu" };
       const role = r.utilisateur?.role;
-      const icone_role = ICONES_ROLE[role] ?? `👤 ${role || "inconnu"}`;
+      const icone_role = ICONES_ROLE[role] ?? `�??� ${role || "inconnu"}`;
       return {
         id: r.id,
         date: r.date,
@@ -500,7 +500,7 @@ router.get("/all", authMiddleware, verifyRole(ROLES_RESERVATION_VIEW), async (re
     });
 
   } catch (error) {
-    console.error("❌ Erreur GET /api/reservations/list :", error);
+    console.error("a�? Erreur GET /api/reservations/list :", error);
     return safeResponse(res, { error: "Erreur serveur" }, 500, {
       endpoint: "/api/reservations/list",
       user: req.user?.email
@@ -563,24 +563,24 @@ router.get("/all", authMiddleware, verifyRole(ROLES_RESERVATION_VIEW), async (re
  *       409:
  *         description: Conflit - salle déjà réservée
  */
-router.post("/create", authMiddleware, verifyMinimumRole("utilisateur"), async (req, res) => {
+router.post("/create", authMiddleware, verifyMinimumRole("user"), async (req, res) => {
   const { room_id, date, heure_debut, heure_fin, statut, equipements_attribues } = req.body;
   const user_id = req.user.id;
 
   try {
     if (!room_id || !date || !heure_debut || !heure_fin) {
-      return res.status(400).json({ error: "⛔ Paramètres requis manquants" });
+      return res.status(400).json({ error: "a?? Paramètres requis manquants" });
     }
 
     if (!horairesValides(heure_debut, heure_fin)) {
       return res.status(400).json({
-        error: "⛔ Créneau invalide : l'heure de fin doit être après l'heure de début"
+        error: "a?? Créneau invalide : l'heure de fin doit être après l'heure de début"
       });
     }
 
     if (!dureeMinimale(heure_debut, heure_fin)) {
       return res.status(400).json({
-        error: "⛔ Durée trop courte : minimum 30 minutes requises"
+        error: "a?? Durée trop courte : minimum 30 minutes requises"
       });
     }
 
@@ -602,7 +602,7 @@ router.post("/create", authMiddleware, verifyMinimumRole("utilisateur"), async (
     });
 
     if (chevauchement) {
-      return res.status(409).json({ error: "⛔ La salle est déjà réservée à ce créneau." });
+      return res.status(409).json({ error: "a?? La salle est déjà réservée à ce créneau." });
     }
 
     const nouvelleReservation = await Reservation.create({
@@ -616,11 +616,11 @@ router.post("/create", authMiddleware, verifyMinimumRole("utilisateur"), async (
     });
 
     return res.status(201).json({
-      message: "✅ Réservation créée",
+      message: "a?? Réservation créée",
       reservation: nouvelleReservation
     });
   } catch (error) {
-    console.error("❌ Erreur POST/api/reservations/create :", error);
+    console.error("a�? Erreur POST/api/reservations/create :", error);
     return res.status(500).json({ error: "Erreur serveur" });
   }
 });
@@ -677,7 +677,7 @@ router.delete( "/delete/:id",authMiddleware,autoAudit({ action: "DELETE_RESERVAT
       const reservation = await Reservation.findByPk(id);
 
       if (!reservation) {
-        return res.status(404).json({ error: "📛 Réservation introuvable" });
+        return res.status(404).json({ error: "�??? Réservation introuvable" });
       }
 
       req.auditSnapshot = reservation.toJSON(); // avant suppression
@@ -685,7 +685,7 @@ router.delete( "/delete/:id",authMiddleware,autoAudit({ action: "DELETE_RESERVAT
 
       res.json({ success: true, deletedId: id });
     } catch (error) {
-      console.error("❌ Erreur DELETE /reservations/delete/:id :", error);
+      console.error("a�? Erreur DELETE /reservations/delete/:id :", error);
       res.status(500).json({ error: "Erreur serveur" });
     }
   }
@@ -755,7 +755,7 @@ router.put("/assign/:id",authMiddleware,autoAudit({ action: "ASSIGN_RESPONSABLE"
     try {
       const reservation = await Reservation.findByPk(id);
       if (!reservation) {
-        return res.status(404).json({ error: "📛 Réservation introuvable" });
+        return res.status(404).json({ error: "�??? Réservation introuvable" });
       }
 
       req.auditSnapshot = reservation.toJSON(); // avant mutation
@@ -765,7 +765,7 @@ router.put("/assign/:id",authMiddleware,autoAudit({ action: "ASSIGN_RESPONSABLE"
 
       res.json({ success: true, updated: reservation });
     } catch (error) {
-      console.error("❌ Erreur PUT /reservations/assign/:id :", error);
+      console.error("a�? Erreur PUT /reservations/assign/:id :", error);
       res.status(500).json({ error: "Erreur serveur" });
     }
   }
@@ -868,11 +868,11 @@ router.put("/update/:id",authMiddleware,autoAudit({ action: "UPDATE_RESERVATION"
 
       if (!reservation) {
         return res.status(404).json({ 
-          error: "📛 Réservation introuvable" 
+          error: "�??? Réservation introuvable" 
         });
       }
 
-      // 👁️ Capturer l'état avant modification pour l'audit
+      // �??�️ Capturer l'état avant modification pour l'audit
       req.auditSnapshot = reservation.toJSON();
 
       // Sauvegarder les valeurs actuelles pour les notifications
@@ -896,14 +896,14 @@ router.put("/update/:id",authMiddleware,autoAudit({ action: "UPDATE_RESERVATION"
       const salle = reservation.salle;
       const notifications = [];
 
-      // 📩 Notification pour changement de statut
+      // �??� Notification pour changement de statut
       if (statut && statut !== ancienStatut) {
-        const messageStatut = `🔔 Bonjour ${utilisateur.nom},
+        const messageStatut = `�??? Bonjour ${utilisateur.nom},
 
 Votre réservation pour "${salle.nom}" le ${reservation.date} à ${reservation.heure_debut} a été ${statut}.
 
 Statut précédent : ${ancienStatut}
-🕒 Modifiée le ${new Date().toLocaleString()}`;
+�??? Modifiée le ${new Date().toLocaleString()}`;
 
         notifications.push({
           type: 'status_change',
@@ -918,16 +918,16 @@ Statut précédent : ${ancienStatut}
         );
       }
 
-      // 📩 Notification pour changement de date
+      // �??� Notification pour changement de date
       if (autresChamps.date && autresChamps.date !== ancienneDate) {
-        const messageDate = `🔔 Bonjour ${utilisateur.nom},
+        const messageDate = `�??? Bonjour ${utilisateur.nom},
 
 La date de votre réservation pour "${salle.nom}" a été modifiée.
 
 Ancienne date : ${ancienneDate}
 Nouvelle date : ${autresChamps.date}
 Horaire : ${reservation.heure_debut} - ${reservation.heure_fin}
-🕒 Modifiée le ${new Date().toLocaleString()}`;
+�??? Modifiée le ${new Date().toLocaleString()}`;
 
         notifications.push({
           type: 'date_change',
@@ -936,16 +936,16 @@ Horaire : ${reservation.heure_debut} - ${reservation.heure_fin}
         });
       }
 
-      // 📩 Notification pour changement d'horaire
+      // �??� Notification pour changement d'horaire
       if ((autresChamps.heure_debut && autresChamps.heure_debut !== ancienneHeureDebut) ||
           (autresChamps.heure_fin && autresChamps.heure_fin !== ancienneHeureFin)) {
-        const messageHoraire = `🔔 Bonjour ${utilisateur.nom},
+        const messageHoraire = `�??? Bonjour ${utilisateur.nom},
 
 L'horaire de votre réservation pour "${salle.nom}" le ${reservation.date} a été modifié.
 
 Ancien horaire : ${ancienneHeureDebut} - ${ancienneHeureFin}
 Nouvel horaire : ${reservation.heure_debut} - ${reservation.heure_fin}
-🕒 Modifiée le ${new Date().toLocaleString()}`;
+�??? Modifiée le ${new Date().toLocaleString()}`;
 
         notifications.push({
           type: 'time_change',
@@ -986,11 +986,11 @@ Nouvel horaire : ${reservation.heure_debut} - ${reservation.heure_fin}
               notification.message
             );
           } catch (emailError) {
-            console.warn("📭 Envoi email échoué :", emailError.message);
+            console.warn("�??� Envoi email échoué :", emailError.message);
           }
 
         } catch (notificationError) {
-          console.error("❌ Erreur notification :", notificationError.message);
+          console.error("a�? Erreur notification :", notificationError.message);
           // Les erreurs de notification ne doivent pas faire échouer la mise à jour
         }
       }
@@ -1005,19 +1005,19 @@ Nouvel horaire : ${reservation.heure_debut} - ${reservation.heure_fin}
 
       return res.json({
         success: true,
-        message: "✅ Réservation mise à jour",
+        message: "a?? Réservation mise à jour",
         updated: reservation,
         notifications_sent: notifications.length,
         modifications_detected: notifications.map(n => n.type)
       });
 
     } catch (error) {
-      console.error("❌ Erreur PUT /api/reservations/update/:id :", error);
+      console.error("a�? Erreur PUT /api/reservations/update/:id :", error);
       
       // Gestion des erreurs de validation Sequelize
       if (error.name === 'SequelizeValidationError') {
         return res.status(400).json({
-          error: "📛 Données de réservation invalides",
+          error: "�??? Données de réservation invalides",
           details: error.errors.map(e => e.message)
         });
       }
@@ -1025,12 +1025,12 @@ Nouvel horaire : ${reservation.heure_debut} - ${reservation.heure_fin}
       // Gestion des erreurs de contraintes
       if (error.name === 'SequelizeUniqueConstraintError') {
         return res.status(409).json({
-          error: "📛 Conflit de réservation détecté"
+          error: "�??? Conflit de réservation détecté"
         });
       }
 
       return res.status(500).json({ 
-        error: "❌ Erreur serveur lors de la mise à jour" 
+        error: "a�? Erreur serveur lors de la mise à jour" 
       });
     }
   }

@@ -1,171 +1,220 @@
-require("dotenv").config();
+/* eslint-disable no-console, @typescript-eslint/no-require-imports */
+// ========================================
+// 🚀 SERVEUR PRINCIPAL - Réservation de Salles
+// ========================================
+
+// Chargement des variables d'environnement
+if (process.env.NODE_ENV === 'test') {
+  require('dotenv').config({ path: '.env.test' });
+} else {
+  require('dotenv').config();
+}
+
 const express = require("express");
-const morgan = require("morgan");
+const cors = require("cors");
+const helmet = require("helmet");
 const { sequelize } = require("./models");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Middlewares de base
+// ========================================
+// 🔧 MIDDLEWARES DE BASE
+// ========================================
+app.use(helmet()); // Sécurité
+app.use(cors({
+  origin: ['http://localhost:3000', 'http://localhost:5173'],
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
 app.use(express.json());
-app.use(morgan("dev"));
+app.use(express.urlencoded({ extended: true }));
 
+// Logging simple
+app.use((req, res, next) => {
+  console.log(`${req.method} ${req.path}`);
+  next();
+});
 
+// ========================================
+// 📂 CHARGEMENT DES ROUTES
+// ========================================
 
-
-// server.js
-const app = require('./app');
-
-
-
-// Charger les bonnes variables d'environnement selon le contexte
-if (process.env.NODE_ENV === 'test') {
-  require('dotenv').config({ path: '.env.test' });
-} else {
-  require('dotenv').config(); // Charge .env par défaut
-}
-
-
-
-// 🔍 CHARGEMENT SÉQUENTIEL AVEC LOGS DÉTAILLÉS
-
-// ✅ AJOUT : Routes métadonnées (priorité haute - pas d'auth requise)
+// Routes métadonnées (pas d'auth requise)
 try {
-  console.log("📊 Chargement de meta...");
+  console.log("📊 Chargement routes meta...");
   const metaRoutes = require('./routes/meta');
-  console.log("✅ Meta importé avec succès");
   app.use("/api", metaRoutes);
-  console.log("✅ Meta monté sur /api (meta, version, info)");
+  console.log("✅ Meta monté sur /api");
 } catch (error) {
-  console.error("❌ ERREUR dans meta:", error.message);
+  console.error("❌ ERREUR meta:", error.message);
   process.exit(1);
 }
 
-// ✅ AJOUT : Routes audit avancé
+// Routes audit
 try {
-  console.log("🔍 Chargement de audit...");
+  console.log("🔍 Chargement routes audit...");
   const auditRoutes = require('./routes/audit');
-  console.log("✅ Audit importé avec succès");
   app.use("/api/audit", auditRoutes);
   console.log("✅ Audit monté sur /api/audit");
 } catch (error) {
-  console.error("❌ ERREUR dans audit:", error.message);
+  console.error("❌ ERREUR audit:", error.message);
   process.exit(1);
 }
 
+// Routes notifications
 try {
-  console.log("📂 Chargement de notifications...");
+  console.log("📧 Chargement routes notifications...");
   const notificationsRoutes = require("./routes/notifications");
-  console.log("✅ Notifications importé avec succès");
   app.use("/api/notifications", notificationsRoutes);
   console.log("✅ Notifications monté sur /api/notifications");
 } catch (error) {
-  console.error("❌ ERREUR dans notifications:", error.message);
+  console.error("❌ ERREUR notifications:", error.message);
   process.exit(1);
 }
 
+// Routes authentification
 try {
-  console.log("📂 Chargement de auth...");
+  console.log("🔐 Chargement routes auth...");
   const authRoutes = require("./routes/auth");
-  console.log("✅ Auth importé avec succès");
   app.use("/api", authRoutes);
   console.log("✅ Auth monté sur /api");
 } catch (error) {
-  console.error("❌ ERREUR dans auth:", error.message);
+  console.error("❌ ERREUR auth:", error.message);
   process.exit(1);
 }
 
+// Routes utilisateurs
 try {
-  console.log("📂 Chargement de users...");
+  console.log("👥 Chargement routes users...");
   const usersRoutes = require("./routes/users");
-  console.log("✅ Users importé avec succès");
   app.use("/api/users", usersRoutes);
   console.log("✅ Users monté sur /api/users");
 } catch (error) {
-  console.error("❌ ERREUR dans users:", error.message);
+  console.error("❌ ERREUR users:", error.message);
   process.exit(1);
 }
 
+// Routes réservations
 try {
-  console.log("📂 Chargement de reservations...");
+  console.log("📅 Chargement routes reservations...");
   const reservationsRoutes = require("./routes/reservations");
-  console.log("✅ Reservations importé avec succès");
   app.use("/api/reservations", reservationsRoutes);
   console.log("✅ Reservations monté sur /api/reservations");
 } catch (error) {
-  console.error("❌ ERREUR dans reservations:", error.message);
+  console.error("❌ ERREUR reservations:", error.message);
   process.exit(1);
 }
 
+// Routes salles
 try {
-  console.log("📂 Chargement de rooms...");
+  console.log("🏢 Chargement routes rooms...");
   const roomsRoutes = require("./routes/rooms");
-  console.log("✅ Rooms importé avec succès");
   app.use("/api/rooms", roomsRoutes);
   console.log("✅ Rooms monté sur /api/rooms");
 } catch (error) {
-  console.error("❌ ERREUR dans rooms:", error.message);
+  console.error("❌ ERREUR rooms:", error.message);
   process.exit(1);
 }
 
-console.log("🎉 Toutes les routes chargées avec succès");
+console.log("🎉 Toutes les routes chargées");
 
-// 📘 Route de santé simple (existante)
+// ========================================
+// 🛣️ ROUTES DE SANTÉ ET ERREURS
+// ========================================
+
+// Route de santé
 app.get("/api/healthcheck", (req, res) => {
   return res.status(200).json({ 
     status: "✅ API opérationnelle", 
     timestamp: new Date().toISOString(),
-    service: "Système de Réservation de Salles"
+    service: "Système de Réservation de Salles",
+    database: "Connected"
   });
 });
 
-// ⛔ Route non reconnue = 404 JSON (CORRIGÉE)
-app.use("/*", (req, res) => {
-  return res.status(404).json({ error: "⛔ Route inconnue" });
+// Route 404 - doit être après toutes les routes
+app.use("*", (req, res) => {
+  return res.status(404).json({ 
+    error: "Route non trouvée",
+    path: req.originalUrl,
+    method: req.method
+  });
 });
 
-// 🔧 Middleware de gestion centralisée des erreurs
+// Middleware de gestion des erreurs
 app.use((err, req, res, next) => {
-  console.error("❌ Erreur middleware :", err);
+  console.error("❌ Erreur serveur:", err);
   if (res.headersSent) return next(err);
-  return res.status(500).json({ error: "Erreur serveur interne" });
+  return res.status(500).json({ 
+    error: "Erreur serveur interne",
+    message: process.env.NODE_ENV === 'development' ? err.message : undefined
+  });
 });
 
+// ========================================
+// 🚀 DÉMARRAGE DU SERVEUR
+// ========================================
 
-
+// Ne pas démarrer le serveur en mode test
 if (process.env.NODE_ENV !== 'test') {
-  const PORT = process.env.PORT || 3000;
-  app.listen(PORT, () => {
-    console.log(`🚀 Serveur démarré sur le port ${PORT}`);
-  });
-}
-// 🚀 Démarrage du serveur avec authentification DB
-sequelize.authenticate()
-  .then(() => {
-    console.log("✅ Connexion à la base réussie");
-    app.listen(PORT, () => {
-      console.log(`🚀 Serveur démarré sur http://localhost:${PORT}`);
-      console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
-      console.log(`📊 ENDPOINTS MÉTADONNÉES (Phase 1) :`);
-      console.log(`   ✅ GET http://localhost:${PORT}/api/meta`);
-      console.log(`   ✅ GET http://localhost:${PORT}/api/version`);
-      console.log(`   ✅ GET http://localhost:${PORT}/api/info`);
-      console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
-      console.log(`🔍 ENDPOINTS AUDIT AVANCÉ (Phase 2) :`);
-      console.log(`   ✅ GET http://localhost:${PORT}/api/audit/entity/:type/:id`);
-      console.log(`   ✅ GET http://localhost:${PORT}/api/audit/user/:id`);
-      console.log(`   ✅ GET http://localhost:${PORT}/api/audit/actions`);
-      console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
-      console.log(`🏥 HEALTH CHECK :`);
-      console.log(`   ✅ GET http://localhost:${PORT}/api/healthcheck`);
-      console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
-      console.log(`🎯 TESTS RAPIDES :`);
-      console.log(`   curl http://localhost:${PORT}/api/meta`);
-      console.log(`   curl http://localhost:${PORT}/api/info`);
-      console.log(`   curl "http://localhost:${PORT}/api/audit/actions?limit=5"`);
-      console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
+  sequelize.authenticate()
+    .then(() => {
+      console.log("✅ Connexion MySQL établie");
+      
+      // Démarrer le serveur HTTP
+      app.listen(PORT, () => {
+        console.log(`
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🚀 SERVEUR DÉMARRÉ SUR http://localhost:${PORT}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📊 ENDPOINTS DISPONIBLES :
+
+   🔐 Authentification
+   POST   http://localhost:${PORT}/api/register
+   POST   http://localhost:${PORT}/api/login
+   GET    http://localhost:${PORT}/api/profile
+
+   👥 Utilisateurs
+   GET    http://localhost:${PORT}/api/users
+   GET    http://localhost:${PORT}/api/users/:id
+   PUT    http://localhost:${PORT}/api/users/:id
+   DELETE http://localhost:${PORT}/api/users/:id
+
+   🏢 Salles
+   GET    http://localhost:${PORT}/api/rooms
+   POST   http://localhost:${PORT}/api/rooms
+   GET    http://localhost:${PORT}/api/rooms/:id
+   PUT    http://localhost:${PORT}/api/rooms/:id
+   DELETE http://localhost:${PORT}/api/rooms/:id
+
+   📅 Réservations
+   GET    http://localhost:${PORT}/api/reservations
+   POST   http://localhost:${PORT}/api/reservations
+   GET    http://localhost:${PORT}/api/reservations/:id
+   PUT    http://localhost:${PORT}/api/reservations/:id
+   DELETE http://localhost:${PORT}/api/reservations/:id
+
+   🔍 Audit & Meta
+   GET    http://localhost:${PORT}/api/meta
+   GET    http://localhost:${PORT}/api/audit/actions
+
+   🏥 Health Check
+   GET    http://localhost:${PORT}/api/healthcheck
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        `);
+      });
+    })
+    .catch((error) => {
+      console.error("❌ Erreur de connexion MySQL:", error.message);
+      console.error("💡 Vérifiez que XAMPP MySQL est démarré");
+      console.error("💡 Vérifiez les credentials dans .env");
+      process.exit(1);
     });
-  })
-  .catch((error) => {
-    console.error("❌ Erreur de connexion à la base :", error);
-  });
+}
+
+// E/ Expopour les tests
+module.exports = app;

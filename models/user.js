@@ -2,53 +2,71 @@
 const { Model } = require("sequelize");
 const bcrypt = require("bcryptjs");
 
-module.exports = (sequelize, DataTypes) => {class User extends Model {static associate(models) {
-      // 🔹 Un utilisateur peut faire plusieurs réservations
+module.exports = (sequelize, DataTypes) => {
+  class User extends Model {
+    static associate(models) {
+      // Un utilisateur peut faire plusieurs réservations
       User.hasMany(models.Reservation, {
-        foreignKey: "user_id", // CORRIGÉ : correspond à la table
+        foreignKey: "user_id",
         as: "reservations"
       });
       
-      // 🔹 Un utilisateur peut gérer plusieurs salles
+      // Un utilisateur peut gérer plusieurs salles
       User.hasMany(models.Room, {
         foreignKey: "responsable_id",
         as: "salles" 
       });
       
-      // 🔹 Un utilisateur peut avoir plusieurs logs d'audit
+      // Un utilisateur peut avoir plusieurs logs d'audit
       User.hasMany(models.AuditLog, {
         foreignKey: "user_id",
         as: "audit_logs"
       });
+    }
+
+    // Méthode pour vérifier le mot de passe
+    async validatePassword(password) {
+      return await bcrypt.compare(password, this.password);
     }
   }
 
   User.init(
     {
       nom: {
-        type: DataTypes.STRING,
-        allowNull: false
+        type: DataTypes.STRING(100),
+        allowNull: false,
+        field: 'nom' // Nom de la colonne en BDD
       },
-      prenom: { // AJOUTÉ car utilisé dans associations.js
-        type: DataTypes.STRING,
-        allowNull: true
+      prenom: {
+        type: DataTypes.STRING(100),
+        allowNull: false,
+        field: 'prenom'
       },
       email: {
-        type: DataTypes.STRING,
+        type: DataTypes.STRING(255),
         allowNull: false,
         unique: true,
         validate: {
           isEmail: true
         }
       },
-      mot_de_passe: {
-        type: DataTypes.STRING,
-        allowNull: false
+      password: {
+        type: DataTypes.STRING(255),
+        allowNull: false,
+        field: 'password' // Harmonisé avec routes
       },
       role: {
-        type: DataTypes.ENUM("admin", "responsable_salle", "utilisateur"),
+        type: DataTypes.ENUM("admin", "responsable", "user"),
         allowNull: false,
-        defaultValue: "utilisateur"
+        defaultValue: "user"
+      },
+      poste: {
+        type: DataTypes.STRING(100),
+        allowNull: true
+      },
+      telephone: {
+        type: DataTypes.STRING(20),
+        allowNull: true
       },
       actif: {
         type: DataTypes.BOOLEAN,
@@ -59,21 +77,21 @@ module.exports = (sequelize, DataTypes) => {class User extends Model {static ass
     {
       sequelize,
       modelName: "User",
-      tableName: "Users",
+      tableName: "users",
+      underscored: false, // BDD utilise camelCase
+      timestamps: true,
       
       hooks: {
-        // 🔐 Hash du mot de passe à la création
-        beforeCreate: async (user, options) => {
-          if (user.mot_de_passe) {
-            const hash = await bcrypt.hash(user.mot_de_passe, 10);
-            user.mot_de_passe = hash;
+        // Hash du mot de passe à la création
+        beforeCreate: async (user) => {
+          if (user.password && !user.password.startsWith('$2a$')) {
+            user.password = await bcrypt.hash(user.password, 12);
           }
         },
-        // 🔐 Hash si mot de passe modifié
-        beforeUpdate: async (user, options) => {
-          if (user.changed("mot_de_passe")) {
-            const hash = await bcrypt.hash(user.mot_de_passe, 10);
-            user.mot_de_passe = hash;
+        // Hash si mot de passe modifié
+        beforeUpdate: async (user) => {
+          if (user.changed("password") && !user.password.startsWith('$2a$')) {
+            user.password = await bcrypt.hash(user.password, 12);
           }
         }
       }

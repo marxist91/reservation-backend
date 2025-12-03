@@ -55,11 +55,71 @@ try {
 
 console.log("📝 Test 5: Import du modèle User");
 try {
-  const { User } = require("./models");
+  import dotenv from 'dotenv';
+dotenv.config();
+
+import express from 'express';
+const app = express();
+const PORT = process.env.PORT || 3000;
+
+app.get("/simple", (req, res) => {
+  res.json({ message: "Route simple OK" });
+});
+
+console.log("📝 Test 1: Route simple");
+
+try {
+  app.get("/param/:id", (req, res) => {
+    res.json({ 
+      message: "Route avec paramètre OK", 
+      id: req.params.id 
+    });
+  });
+  console.log("✅ Route avec paramètre créée");
+} catch (error) {
+  console.error("❌ Erreur route avec paramètre:", error.message);
+}
+
+console.log("📝 Test 2: Route avec paramètre");
+
+try {
+  app.get("/multi/:userId/posts/:postId", (req, res) => {
+    res.json({ 
+      message: "Route multi-paramètres OK", 
+      userId: req.params.userId,
+      postId: req.params.postId 
+    });
+  });
+  console.log("✅ Route multi-paramètres créée");
+} catch (error) {
+  console.error("❌ Erreur route multi-paramètres:", error.message);
+}
+
+console.log("📝 Test 3: Route avec multiple paramètres");
+
+try {
+  const { default: verifyRole } = await import("./middlewares/verifyRole.js");
+  console.log("✅ verifyRole importé avec succès");
+  
+  app.get("/protected/:id", verifyRole(["admin"]), (req, res) => {
+    res.json({ message: "Route protégée OK" });
+  });
+  console.log("✅ Route protégée créée");
+  
+} catch (error) {
+  console.error("❌ Erreur avec verifyRole:", error.message);
+}
+
+console.log("📝 Test 4: Import du middleware verifyRole");
+
+try {
+  const { User } = await import("./models/index.js");
   console.log("✅ Modèle User importé");
 } catch (error) {
   console.error("❌ Erreur modèle User:", error.message);
 }
+
+console.log("📝 Test 5: Import du modèle User");
 
 console.log("🚀 Tentative de démarrage...");
 

@@ -5,8 +5,8 @@ module.exports = (sequelize, DataTypes) => {
     action: { type: DataTypes.STRING }, // ex: "UPDATE_STATUT", "DELETE_RESERVATION"
     cible_type: { type: DataTypes.STRING }, // ex: "Reservation"
     cible_id: { type: DataTypes.INTEGER },
-    avant: { type: DataTypes.JSONB },
-    apres: { type: DataTypes.JSONB },
+    avant: { type: DataTypes.JSON },
+    apres: { type: DataTypes.JSON },
     timestamp: { type: DataTypes.DATE, defaultValue: DataTypes.NOW }
   });
 };

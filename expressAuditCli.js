@@ -1,5 +1,5 @@
-const fs = require("fs");
-const path = require("path");
+import fs from "fs";
+import path from "path";
 
 const routesDir = path.join(__dirname, "routes");
 const otherDirs = ["middlewares", "helpers", "utils"];

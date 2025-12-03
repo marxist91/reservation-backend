@@ -3,20 +3,28 @@
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
   async up(queryInterface, Sequelize) {
-    // Injection du responsable fictif pour toutes les salles existantes
+    // 1. Ajouter la colonne responsable_id
+    await queryInterface.addColumn('rooms', 'responsable_id', {
+      type: Sequelize.INTEGER,
+      allowNull: true,
+      references: {
+        model: 'users',
+        key: 'id'
+      },
+      onUpdate: 'CASCADE',
+      onDelete: 'SET NULL'
+    });
+
+    // 2. Injection du responsable fictif pour toutes les salles existantes
     await queryInterface.sequelize.query(`
-      UPDATE Rooms
+      UPDATE rooms
       SET responsable_id = 1
       WHERE responsable_id IS NULL;
     `);
   },
 
   async down(queryInterface, Sequelize) {
-    // On annule en mettant les valeurs à NULL
-    await queryInterface.sequelize.query(`
-      UPDATE Rooms
-      SET responsable_id = NULL
-      WHERE responsable_id = 1;
-    `);
+    // Supprimer la colonne
+    await queryInterface.removeColumn('rooms', 'responsable_id');
   }
 };

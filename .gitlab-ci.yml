@@ -1,0 +1,15 @@
+stages:
+  - validate
+  - test
+  - build
+  - deploy
+
+mysql-env-validation:
+  stage: validate
+  script:
+    - node tools/validate-mysql-env.js
+  allow_failure: false
+  artifacts:
+    paths:
+      - reports/mysql-env-report.json
+    when: always

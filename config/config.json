@@ -1,23 +1,40 @@
-{"development": {
-  "username": "marcel_admin",
-  "password": "Reservation2025!",
-  "database": "reservation_salles",
-  "host": "127.0.0.1",
-  "dialect": "mysql"
-},
-  "test": {
+{
+  "development": {
     "username": "marcel_admin",
     "password": "Reservation2025!",
     "database": "reservation_salles",
-    "host": "127.0.0.1",
+    "host": "localhost",
+    "port": 3306,
+    "dialect": "mysql",
+    "logging": false,
+    "pool": {
+      "max": 5,
+      "min": 0,
+      "acquire": 30000,
+      "idle": 10000
+    },
+    "define": {
+      "timestamps": true,
+      "underscored": true,
+      "freezeTableName": true
+    }
+  },
+  "test": {
+    "username": "marcel_admin",
+    "password": "Reservation2025!",
+    "database": "reservation_salles_test",
+    "host": "localhost",
+    "port": 3306,
     "dialect": "mysql",
     "logging": false
   },
   "production": {
     "username": "root",
     "password": null,
-    "database": "database_production",
-    "host": "127.0.0.1",
-    "dialect": "mysql"
+    "database": "reservation_salles_prod",
+    "host": "localhost",
+    "port": 3306,
+    "dialect": "mysql",
+    "logging": false
   }
 }

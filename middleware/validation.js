@@ -37,22 +37,22 @@ const validate = (schema, property = 'body') => {
 // Schémas de validation pour l'authentification
 const authSchemas = {
   register: Joi.object({
-    firstName: Joi.string()
-      .min(2)
-      .max(50)
-      .pattern(/^[a-zA-ZÀ-ÿ\s-']+$/)
-      .required()
-      .messages({
-        'string.pattern.base': 'Le prénom ne doit contenir que des lettres, espaces, tirets et apostrophes'
-      }),
-    
-    lastName: Joi.string()
+    nom: Joi.string()
       .min(2)
       .max(50)
       .pattern(/^[a-zA-ZÀ-ÿ\s-']+$/)
       .required()
       .messages({
         'string.pattern.base': 'Le nom ne doit contenir que des lettres, espaces, tirets et apostrophes'
+      }),
+    
+    prenom: Joi.string()
+      .min(2)
+      .max(50)
+      .pattern(/^[a-zA-ZÀ-ÿ\s-']+$/)
+      .required()
+      .messages({
+        'string.pattern.base': 'Le prénom ne doit contenir que des lettres, espaces, tirets et apostrophes'
       }),
     
     email: Joi.string()
@@ -73,14 +73,14 @@ const authSchemas = {
       }),
     
     role: Joi.string()
-      .valid('user', 'admin', 'manager')
+      .valid('user', 'admin', 'responsable')
       .default('user'),
     
-    department: Joi.string()
+    poste: Joi.string()
       .max(100)
       .optional(),
     
-    phone: Joi.string()
+    telephone: Joi.string()
       .pattern(/^(\+33|0)[1-9](\d{8})$/)
       .optional()
       .messages({

@@ -1,7 +1,7 @@
 // generate-frontend-spec.js
-const fs = require('fs');
-const path = require('path');
-const yaml = require('js-yaml');
+import fs from 'fs';
+import path from 'path';
+import yaml from 'js-yaml';
 const role = process.argv[2]; // Ex: 'admin'
 
 //const swagger = require('../../swagger.json'); // ou openapi.json si c’est ce nom là
