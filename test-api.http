@@ -1,0 +1,125 @@
+### Variables
+@baseUrl = http://localhost:3000/api
+@email = admin@port-autonome.com
+@password = Admin123!
+
+### 1. Healthcheck - Vérifier que le serveur répond
+GET http://localhost:3000/api/healthcheck
+Content-Type: application/json
+
+###
+
+### 2. Register - Créer un nouvel utilisateur
+POST {{baseUrl}}/register
+Content-Type: application/json
+
+{
+  "nom": "Test",
+  "prenom": "Utilisateur",
+  "email": "test@port-autonome.com",
+  "password": "Test123!",
+  "poste": "Testeur",
+  "telephone": "0600000000"
+}
+
+###
+
+### 3. Login - S'authentifier (admin)
+POST {{baseUrl}}/login
+Content-Type: application/json
+
+{
+  "email": "{{email}}",
+  "password": "{{password}}"
+}
+
+# COPIER LE TOKEN JWT ICI ↓↓↓
+# @token = VOTRE_TOKEN_ICI
+
+###
+
+### 4. Get Current User - Récupérer l'utilisateur connecté
+GET {{baseUrl}}/users/me
+Authorization: Bearer {{token}}
+
+###
+
+### 5. List Users - Récupérer tous les utilisateurs (admin uniquement)
+GET {{baseUrl}}/users
+Authorization: Bearer {{token}}
+
+###
+
+### 6. List Rooms - Récupérer toutes les salles
+GET {{baseUrl}}/rooms
+Authorization: Bearer {{token}}
+
+###
+
+### 7. Get Room Details - Détails d'une salle
+GET {{baseUrl}}/rooms/1
+Authorization: Bearer {{token}}
+
+###
+
+### 8. List Reservations - Récupérer toutes les réservations
+GET {{baseUrl}}/reservations
+Authorization: Bearer {{token}}
+
+###
+
+### 9. Create Reservation - Créer une nouvelle réservation
+POST {{baseUrl}}/reservations
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "room_id": 1,
+  "date_debut": "2024-12-15T09:00:00",
+  "date_fin": "2024-12-15T11:00:00",
+  "motif": "Réunion de test",
+  "nombre_participants": 10,
+  "equipements_supplementaires": ["Café", "Viennoiseries"]
+}
+
+###
+
+### 10. Update Reservation - Modifier une réservation
+PUT {{baseUrl}}/reservations/1
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "statut": "validee",
+  "commentaire_admin": "Réservation approuvée pour test"
+}
+
+###
+
+### 11. List Audit Logs - Récupérer les logs d'audit
+GET {{baseUrl}}/audit
+Authorization: Bearer {{token}}
+
+###
+
+### 12. Search Rooms - Rechercher des salles
+GET {{baseUrl}}/rooms?capacite_min=20&statut=disponible
+Authorization: Bearer {{token}}
+
+###
+
+### 13. Get User Reservations - Réservations de l'utilisateur
+GET {{baseUrl}}/reservations/user/me
+Authorization: Bearer {{token}}
+
+###
+
+### 14. Delete Reservation - Annuler une réservation
+DELETE {{baseUrl}}/reservations/11
+Authorization: Bearer {{token}}
+
+###
+
+### 15. Logout (optionnel selon implémentation)
+POST {{baseUrl}}/logout
+Authorization: Bearer {{token}}

@@ -122,4 +122,6 @@ echo ""
 echo "💡 Prochaines étapes:"
 echo "   - Créer un repository sur GitHub/GitLab"
 echo "   - git remote add origin <URL_REPO>"
-echo "   - git push -u origin main"
+echo "   - git push -u origin main"secrets/ 
+
+data/
