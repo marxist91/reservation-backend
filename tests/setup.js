@@ -15,10 +15,13 @@ const setupTestDatabase = async () => {
   // Utiliser une base de données de test séparée
   const sequelize = new Sequelize(
     process.env.TEST_DB_NAME || 'reservation_test_db', // Base différente pour les tests
-    process.env.TEST_DB_USER || 'marcel_admin',
-    process.env.TEST_DB_PASSWORD || 'Reservation2025!',
+    // process.env.TEST_DB_USER || 'marcel_admin',
+    process.env.TEST_DB_USER || '',
+    // process.env.TEST_DB_PASSWORD || 'Reservation2025!',
+    process.env.TEST_DB_PASSWORD || '',
     {
       host: process.env.TEST_DB_HOST || 'localhost',
+      port: process.env.TEST_DB_PORT ? parseInt(process.env.TEST_DB_PORT, 10) : 3309,
       dialect: 'mysql',
       logging: false, // Désactiver les logs SQL pendant les tests
       pool: {
@@ -127,21 +130,21 @@ global.testData = {
       date_debut: new Date(Date.now() + 24 * 60 * 60 * 1000), // Demain
       date_fin: new Date(Date.now() + 25 * 60 * 60 * 1000),   // Demain + 1h
       statut: 'confirmee',
-      prix_total: 50.00,
+      // prix_total: 50.00,  // commenté par nettoyage
       notes: 'Réservation de test'
     },
     past: {
       date_debut: new Date(Date.now() - 48 * 60 * 60 * 1000), // Il y a 2 jours
       date_fin: new Date(Date.now() - 47 * 60 * 60 * 1000),   // Il y a 2 jours + 1h
       statut: 'terminee',
-      prix_total: 30.00,
+      // prix_total: 30.00,  // commenté par nettoyage
       notes: 'Réservation passée'
     },
     pending: {
       date_debut: new Date(Date.now() + 48 * 60 * 60 * 1000), // Dans 2 jours
       date_fin: new Date(Date.now() + 49 * 60 * 60 * 1000),   // Dans 2 jours + 1h
       statut: 'en_attente',
-      prix_total: 75.00,
+      // prix_total: 75.00,  // commenté par nettoyage
       notes: 'En attente de confirmation'
     }
   }
@@ -299,7 +302,11 @@ global.testUtils = {
 // Setup avant tous les tests
 beforeAll(async () => {
   console.log('🚀 Configuration des tests...');
-  await setupTestDatabase();
+  if (process.env.SKIP_DB_TEST_SETUP === 'true') {
+    console.log('⏭️ SKIP_DB_TEST_SETUP=true — saut de la configuration DB pour les tests');
+  } else {
+    await setupTestDatabase();
+  }
 });
 
 // Cleanup avant chaque test

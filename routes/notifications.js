@@ -1,102 +1,104 @@
-/**
- * 🔔 Notifications API
- * Base path : /api/notifications
- *
- * Endpoints :
- * - GET /self                  → Liste des notifications du user connecté
- * - GET /user/:userId         → Liste des notifications d’un utilisateur donné
- * - POST /read/:notificationId → Marquer comme lue
- * - DELETE /delete/:notificationId → Supprimer une notification
- *
- * Sécurité :
- * - authMiddleware obligatoire
- * - verifyRole selon ROLES_NOTIFICATION_VIEW
- */
-
-const express = require("express");
+﻿const express = require("express");
 const router = express.Router();
 const fs = require("fs");
 const path = require("path");
 
 const authMiddleware = require("../middlewares/authMiddleware");
 const verifyRole = require("../middlewares/verifyRole");
-const { ROLES_NOTIFICATION_VIEW,ROLES_ADMIN } = require("../constants/permissions");
+const { ROLES_NOTIFICATION_VIEW, ROLES_ADMIN } = require("../constants/permissions");
 const autoAudit = require("../middlewares/autoAudit");
 
 const { Notification } = require("../models");
 const ACTIONS = require("../constants/actions");
 
-autoAudit({ action: ACTIONS.DELETE_NOTIFICATIONS_BY_ROOM, cibleType: "Room" })
-
-// 📘 GET /api/notifications/self
-router.get("/self", authMiddleware, verifyRole(ROLES_NOTIFICATION_VIEW), async (req, res) => {
+// GET /api/notifications (Liste des notifications du user connecté)
+router.get("/", authMiddleware, verifyRole(ROLES_NOTIFICATION_VIEW), async (req, res) => {
   try {
     const userId = req.user.id;
     const notifications = await Notification.findAll({
-      where: { destinataire_id: userId },
-      order: [["createdAt", "DESC"]]
+      where: { user_id: userId },
+      order: [["created_at", "DESC"]] // Utilisation de created_at (snake_case)
     });
+    console.log(`📧 Notifications renvoyées pour user ${userId}:`, notifications.length, 'notification(s)');
     res.json(notifications);
   } catch (error) {
-    console.error("❌ Erreur GET /notifications/self :", error);
+    console.error("❌ Erreur GET /notifications :", error);
     res.status(500).json({ error: "Erreur serveur notifications" });
   }
 });
 
-// 📘 GET /api/notifications/user/:userId
-router.get("/user/:userId", authMiddleware, verifyRole(ROLES_NOTIFICATION_VIEW), async (req, res) => {
+// GET /api/notifications/mine (Alias pour /)
+router.get("/mine", authMiddleware, verifyRole(ROLES_NOTIFICATION_VIEW), async (req, res) => {
   try {
-    const { userId } = req.params;
+    const userId = req.user.id;
     const notifications = await Notification.findAll({
-      where: { destinataire_id: userId },
-      order: [["createdAt", "DESC"]]
+      where: { user_id: userId },
+      order: [["created_at", "DESC"]] // Utilisation de created_at (snake_case)
     });
     res.json(notifications);
   } catch (error) {
-    console.error("❌ Erreur GET /notifications/user/:userId :", error);
-    res.status(500).json({ error: "Erreur serveur notifications ciblées" });
+    console.error(" Erreur GET /notifications/mine :", error);
+    res.status(500).json({ error: "Erreur serveur notifications" });
   }
 });
 
-// 📘 POST /api/notifications/read/:notificationId
-router.post(
-  "/read/:notificationId",
-  authMiddleware,
-  autoAudit({
-    action: "READ_NOTIFICATION",
-    cibleType: "Notification"
-  }),
-  verifyRole(ROLES_NOTIFICATION_VIEW),
-  async (req, res) => {
-    try {
-      const { notificationId } = req.params;
-      const notif = await Notification.findByPk(notificationId);
-
-      if (!notif) {
-        return res.status(404).json({ error: "Notification introuvable" });
-      }
-
-      req.auditSnapshot = notif.toJSON(); // 🧠 état avant mutation
-
-      notif.lue = true;
-      await notif.save();
-
-      return res.json({ success: true, updated: notif }); // ✅ intercepté par autoAudit
-    } catch (error) {
-      console.error("❌ Erreur POST /notifications/read/:id :", error);
-      res.status(500).json({ error: "Impossible de marquer comme lue" });
+// POST /api/notifications (Créer une notification - Admin ou interne)
+router.post("/", authMiddleware, verifyRole(ROLES_ADMIN), async (req, res) => {
+  try {
+    const { user_id, type, titre, message, reservation_id } = req.body;
+    
+    if (!user_id || !type || !titre || !message) {
+      return res.status(400).json({ error: "Champs obligatoires manquants" });
     }
+
+    const notif = await Notification.create({
+      user_id,
+      type,
+      titre,
+      message,
+      reservation_id,
+      lu: false
+    });
+
+    res.status(201).json(notif);
+  } catch (error) {
+    console.error(" Erreur POST /notifications :", error);
+    res.status(500).json({ error: "Erreur création notification" });
   }
-);
+});
+
+// DELETE /api/notifications/:id (Supprimer une notification)
+router.delete("/:id", authMiddleware, verifyRole(ROLES_NOTIFICATION_VIEW), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const notif = await Notification.findByPk(id);
+
+    if (!notif) {
+      return res.status(404).json({ error: "Notification introuvable" });
+    }
+
+    if (notif.user_id !== req.user.id && req.user.role !== 'admin') {
+      return res.status(403).json({ error: "Accès non autorisé" });
+    }
+
+    await notif.destroy();
+    res.json({ success: true, message: "Notification supprimée" });
+  } catch (error) {
+    console.error(" Erreur DELETE /notifications/:id :", error);
+    res.status(500).json({ error: "Erreur suppression notification" });
+  }
+});
 
 
-
-
-router.get("/", authMiddleware, verifyRole(ROLES_ADMIN), async (req, res) => {
+// GET /api/notifications/logs (Ancien GET / pour les admins - lecture des logs)
+router.get("/logs", authMiddleware, verifyRole(ROLES_ADMIN), async (req, res) => {
   const { date } = req.query;
   const logPath = path.join(__dirname, "..", "logs", "notifications.log");
 
   try {
+    if (!fs.existsSync(logPath)) {
+        return res.json([]);
+    }
     const contenu = fs.readFileSync(logPath, "utf-8");
     const lignes = contenu.split("\n\n").filter(Boolean);
 
@@ -121,54 +123,67 @@ router.get("/", authMiddleware, verifyRole(ROLES_ADMIN), async (req, res) => {
       };
     });
 
-    // 📅 Filtre optionnel par date YYYY-MM-DD
     const filtrés = date
       ? notifications.filter(n => n.horodatage.startsWith(date))
       : notifications;
 
     res.json(filtrés);
   } catch (error) {
-    console.error("❌ Erreur lecture notifications :", error);
+    console.error(" Erreur lecture notifications logs :", error);
     res.status(500).json({ error: "Impossible de lire les logs de notification" });
   }
 });
 
-router.delete(
-  "/by-room/:roomId",
-  authMiddleware,
-  autoAudit({ action: "DELETE_NOTIFICATIONS_BY_ROOM", cibleType: "Room" }),
-  verifyRole("admin"),
-  async (req, res) => {
-    const { roomId } = req.params;
-
-    try {
-      const notifications = await Notification.findAll({
-        where: { salle_id: roomId }
-      });
-
-      if (!notifications.length) {
-        return res.status(404).json({ error: "Aucune notification liée à cette salle" });
+// PUT /api/notifications/:notificationId/read
+router.put(
+    "/:notificationId/read",
+    authMiddleware,
+    verifyRole(ROLES_NOTIFICATION_VIEW),
+    async (req, res) => {
+      try {
+        const { notificationId } = req.params;
+        const notif = await Notification.findByPk(notificationId);
+  
+        if (!notif) {
+          return res.status(404).json({ error: "Notification introuvable" });
+        }
+        
+        if (notif.user_id !== req.user.id && req.user.role !== 'admin') {
+            return res.status(403).json({ error: "Accès non autorisé" });
+        }
+  
+        notif.lu = true;
+        await notif.save();
+  
+        return res.json({ success: true, updated: notif });
+      } catch (error) {
+        console.error(" Erreur PUT /notifications/:id/read :", error);
+        res.status(500).json({ error: "Impossible de marquer comme lue" });
       }
-
-      req.auditSnapshot = notifications.map(n => n.toJSON()); // 🧠 snapshot des notifications
-
-      await Notification.destroy({ where: { salle_id: roomId } });
-
-      return res.json({
-        success: true,
-        message: `✅ ${notifications.length} notification(s) supprimée(s) pour salle #${roomId}`,
-        deletedCount: notifications.length
-      });
-    } catch (error) {
-      console.error("❌ Erreur DELETE /notifications/by-room/:roomId :", error);
-      res.status(500).json({ error: "Impossible de supprimer les notifications" });
     }
-  }
-);
+  );
 
+// PUT /api/notifications/read-all
+router.put(
+    "/read-all",
+    authMiddleware,
+    verifyRole(ROLES_NOTIFICATION_VIEW),
+    async (req, res) => {
+      try {
+        const userId = req.user.id;
+        await Notification.update({ lu: true }, {
+            where: { user_id: userId, lu: false }
+        });
+        return res.json({ success: true });
+      } catch (error) {
+        console.error(" Erreur PUT /notifications/read-all :", error);
+        res.status(500).json({ error: "Impossible de tout marquer comme lu" });
+      }
+    }
+  );
 
-// 📘 DELETE /api/notifications/delete/:notificationId
-router.delete("/delete/:notificationId",authMiddleware,autoAudit({action: "DELETE_NOTIFICATION",cibleType: "Notification"}),verifyRole("admin"),async (req, res) => {
+// DELETE /api/notifications/:notificationId
+router.delete("/:notificationId", authMiddleware, verifyRole(ROLES_NOTIFICATION_VIEW), async (req, res) => {
     try {
       const { notificationId } = req.params;
       const notif = await Notification.findByPk(notificationId);
@@ -177,16 +192,18 @@ router.delete("/delete/:notificationId",authMiddleware,autoAudit({action: "DELET
         return res.status(404).json({ error: "Notification introuvable" });
       }
 
-      req.auditSnapshot = notif.toJSON(); // 🧠 état avant suppression
+      if (notif.user_id !== req.user.id && req.user.role !== 'admin') {
+        return res.status(403).json({ error: "Accès non autorisé" });
+      }
+
       await notif.destroy();
 
-      return res.json({ success: true, deletedId: notificationId }); // ✅ intercepté par autoAudit
+      return res.json({ success: true, deletedId: notificationId });
     } catch (error) {
-      console.error("❌ Erreur DELETE /notifications/delete/:id :", error);
+      console.error(" Erreur DELETE /notifications/:id :", error);
       return res.status(500).json({ error: "Impossible de supprimer la notification" });
     }
   }
 );
-
 
 module.exports = router;

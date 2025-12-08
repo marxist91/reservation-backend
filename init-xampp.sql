@@ -4,7 +4,7 @@
 -- ========================================
 
 -- Création de l'utilisateur admin
-CREATE USER IF NOT EXISTS 'marcel_admin'@'localhost' IDENTIFIED BY 'Reservation2025!';
+-- (commenté par nettoyage) CREATE USER IF NOT EXISTS 'marcel_admin'@'localhost' IDENTIFIED BY 'Reservation2025!';
 
 -- Création de la base de données
 CREATE DATABASE IF NOT EXISTS reservation_salles 
@@ -49,7 +49,7 @@ CREATE TABLE IF NOT EXISTS rooms (
     batiment VARCHAR(50),
     etage VARCHAR(10),
     superficie DECIMAL(8,2),
-    prix_heure DECIMAL(10,2) DEFAULT 0,
+    -- prix_heure DECIMAL(10,2) DEFAULT 0,
     responsable_id INT,
     statut ENUM('disponible', 'maintenance', 'indisponible') DEFAULT 'disponible',
     image_url VARCHAR(255),
@@ -72,7 +72,7 @@ CREATE TABLE IF NOT EXISTS reservations (
     motif TEXT,
     nombre_participants INT DEFAULT 1,
     equipements_supplementaires JSON,
-    prix_total DECIMAL(10,2) DEFAULT 0,
+    -- prix_total DECIMAL(10,2) DEFAULT 0,
     commentaire_admin TEXT,
     validee_par INT,
     validee_le TIMESTAMP NULL,
@@ -235,8 +235,8 @@ DELIMITER ;
 -- PERMISSIONS FINALES
 -- ========================================
 
-GRANT ALL PRIVILEGES ON reservation_salles.* TO 'marcel_admin'@'localhost';
-FLUSH PRIVILEGES;
+-- GRANT ALL PRIVILEGES ON reservation_salles.* TO 'marcel_admin'@'localhost';
+-- FLUSH PRIVILEGES;
 
 -- Afficher le résumé
 SELECT 

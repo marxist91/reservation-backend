@@ -5,8 +5,11 @@ dotenv.config();
 // Configuration de la base de données selon l'environnement
 const config = {
   development: {
-    username: process.env.DB_USERNAME || 'marcel_admin',
-    password: process.env.DB_PASSWORD || 'Reservation2025!',
+    // Commented defaults containing literal credentials
+    // username: process.env.DB_USERNAME || 'marcel_admin',
+    username: process.env.DB_USERNAME || '',
+    // password: process.env.DB_PASSWORD || 'Reservation2025!',
+    password: process.env.DB_PASSWORD || '',
     database: process.env.DB_NAME || 'reservation_salles',
     host: process.env.DB_HOST || 'localhost',
     port: process.env.DB_PORT || 3306,
@@ -26,8 +29,11 @@ const config = {
   },
   
   test: {
-    username: process.env.DB_TEST_USERNAME || 'marcel_admin',
-    password: process.env.DB_TEST_PASSWORD || 'Reservation2025!',
+    // Commented test DB defaults with literal credentials
+    // username: process.env.DB_TEST_USERNAME || 'marcel_admin',
+    username: process.env.DB_TEST_USERNAME || '',
+    // password: process.env.DB_TEST_PASSWORD || 'Reservation2025!',
+    password: process.env.DB_TEST_PASSWORD || '',
     database: process.env.DB_TEST_NAME || 'reservation_salles_test',
     host: process.env.DB_TEST_HOST || 'localhost',
     port: process.env.DB_TEST_PORT || 3306,

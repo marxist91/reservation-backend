@@ -34,5 +34,8 @@ exports.ROLES_USER_DETAILS = ["admin"];
 exports.ROLES_USER_MANAGEMENT = ["admin"];
 exports.ROLES_USER_UPDATE = ["admin"];
 
+// Notifications
+exports.ROLES_NOTIFICATION_VIEW = ["admin", "responsable", "user"];
+
 // Dashboard / statistiques
 exports.ROLES_ANALYTICS_ACCESS = ["admin", "responsable"];

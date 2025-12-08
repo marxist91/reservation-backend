@@ -1,0 +1,83 @@
+﻿router.post("/create", authMiddleware, verifyMinimumRole("user"), async (req, res) => {
+  console.log("ðŸš€ POST /create appelÃ© - Body:", req.body);
+  const { room_id, date, heure_debut, heure_fin, statut, equipements_attribues, equipements_supplementaires, motif, nombre_participants } = req.body;
+  const user_id = req.user.id;
+
+  try {
+    if (!room_id || !date || !heure_debut || !heure_fin) {
+      console.log("âŒ ParamÃ¨tres manquants");
+      return res.status(400).json({ error: "ParamÃ¨tres requis manquants" });
+    }
+
+    // Construction des objets Date
+    const startDateTime = new Date(`${date}T${heure_debut}`);
+    const endDateTime = new Date(`${date}T${heure_fin}`);
+
+    if (isNaN(startDateTime.getTime()) || isNaN(endDateTime.getTime())) {
+      console.log("âŒ Format de date invalide");
+      return res.status(400).json({ error: "Format de date ou d'heure invalide" });
+    }
+
+    if (endDateTime <= startDateTime) {
+      console.log("âŒ CrÃ©neau invalide");
+      return res.status(400).json({
+        error: "CrÃ©neau invalide : l'heure de fin doit Ãªtre aprÃ¨s l'heure de dÃ©but"
+      });
+    }
+
+    // VÃ©rification de la durÃ©e minimale (30 min)
+    const durationMinutes = (endDateTime - startDateTime) / (1000 * 60);
+    if (durationMinutes < 30) {
+      console.log("âŒ DurÃ©e trop courte");
+      return res.status(400).json({
+        error: "DurÃ©e trop courte : minimum 30 minutes requises"
+      });
+    }
+
+    // VÃ©rification des chevauchements
+    const chevauchement = await Reservation.findOne({
+      where: {
+        room_id,
+        statut: { [Op.ne]: 'annulee' },
+        [Op.or]: [
+          {
+            date_debut: {
+              [Op.lt]: endDateTime
+            },
+            date_fin: {
+              [Op.gt]: startDateTime
+            }
+          }
+        ]
+      }
+    });
+
+    if (chevauchement) {
+      console.log("âŒ Chevauchement dÃ©tectÃ©");
+      return res.status(409).json({ error: "La salle est dÃ©jÃ  rÃ©servÃ©e Ã  ce crÃ©neau." });
+    }
+
+    console.log("ðŸ“ CrÃ©ation de la rÃ©servation...");
+    const nouvelleReservation = await Reservation.create({
+      user_id,
+      room_id,
+      date_debut: startDateTime,
+      date_fin: endDateTime,
+      statut: statut ?? "en_attente",
+      equipements_supplementaires: equipements_attribues || equipements_supplementaires,
+      motif: motif || "RÃ©union",
+      nombre_participants: nombre_participants || 1
+    });
+
+    console.log("âœ… RÃ©servation crÃ©Ã©e:", nouvelleReservation.id);
+    return res.status(201).json({
+      message: "RÃ©servation crÃ©Ã©e",
+      reservation: nouvelleReservation
+    });
+  } catch (error) {
+    console.error("âŒ Erreur POST/api/reservations/create:", error.message);
+    console.error("Stack:", error.stack);
+    return res.status(500).json({ error: "Erreur serveur", details: error.message });
+  }
+});
+

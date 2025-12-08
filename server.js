@@ -14,6 +14,7 @@ const express = require("express");
 const cors = require("cors");
 const helmet = require("helmet");
 const { sequelize } = require("./models");
+const { startAutoRejectScheduler } = require("./schedulers/autoRejectExpired");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -74,6 +75,17 @@ try {
   process.exit(1);
 }
 
+// Routes historique
+try {
+  console.log("📜 Chargement routes historique...");
+  const historyRoutes = require("./routes/history");
+  app.use("/api/history", historyRoutes);
+  console.log("✅ Historique monté sur /api/history");
+} catch (error) {
+  console.error("❌ ERREUR historique:", error.message);
+  process.exit(1);
+}
+
 // Routes authentification
 try {
   console.log("🔐 Chargement routes auth...");
@@ -118,6 +130,17 @@ try {
   process.exit(1);
 }
 
+// Routes départements (gestion des départements)
+try {
+  console.log("🏷️ Chargement routes departments...");
+  const departmentsRoutes = require('./routes/departments');
+  app.use('/api/departments', departmentsRoutes);
+  console.log("✅ Departments monté sur /api/departments");
+} catch (error) {
+  console.warn("⚠️ Route departments non trouvée ou erreur au chargement:", error.message);
+  // Ne pas exit: la suite du serveur peut quand même fonctionner sans cette route
+}
+
 console.log("🎉 Toutes les routes chargées");
 
 // ========================================
@@ -159,9 +182,15 @@ app.use((err, req, res, next) => {
 
 // Ne pas démarrer le serveur en mode test
 if (process.env.NODE_ENV !== 'test') {
-  sequelize.authenticate()
+  // Synchroniser la base de données avant de démarrer
+  sequelize.sync({ alter: false }) // Mettre à true si vous voulez que Sequelize mette à jour les tables existantes (attention en prod)
     .then(() => {
-      console.log("✅ Connexion MySQL établie");
+      console.log("✅ Base de données synchronisée");
+      
+      // Démarrer le scheduler d'annulation automatique
+      console.log("🕐 Démarrage du scheduler d'annulation automatique...");
+      startAutoRejectScheduler();
+      console.log("✅ Scheduler activé - vérifie toutes les 5 minutes");
       
       // Démarrer le serveur HTTP
       app.listen(PORT, () => {

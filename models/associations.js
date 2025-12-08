@@ -2,7 +2,7 @@
 
 // Fonction qui sera appelée après l'initialisation des modèles
 const setupAssociations = (models) => {
-  const { User, Room, Reservation, AuditLog } = models;
+  const { User, Room, Reservation, AuditLog, Department } = models;
 
   // ⚠️ IMPORTANT : Les associations principales sont déjà définies dans les modèles individuels
   // On ajoute seulement l'association AuditLog -> User qui n'est pas définie ailleurs
@@ -132,6 +132,7 @@ const setupAssociations = (models) => {
         details: {
           salle_id: reservation.room_id, // CORRIGÉ : room_id au lieu de salle_id
           date: reservation.date,
+          department_id: reservation.department_id || null,
           horaire: `${reservation.heure_debut}-${reservation.heure_fin}`,
           statut: reservation.statut
         }

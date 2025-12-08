@@ -1,10 +1,10 @@
 {
   "development": {
-    "username": "marcel_admin",
-    "password": "Reservation2025!",
+    "username": "root",
+    "password": "",
     "database": "reservation_salles",
     "host": "localhost",
-    "port": 3306,
+    "port": 3309,
     "dialect": "mysql",
     "logging": false,
     "pool": {
@@ -20,11 +20,11 @@
     }
   },
   "test": {
-    "username": "marcel_admin",
-    "password": "Reservation2025!",
+    "username": "root",
+    "password": "",
     "database": "reservation_salles_test",
     "host": "localhost",
-    "port": 3306,
+    "port": 3309,
     "dialect": "mysql",
     "logging": false
   },
@@ -33,7 +33,7 @@
     "password": null,
     "database": "reservation_salles_prod",
     "host": "localhost",
-    "port": 3306,
+    "port": 3309,
     "dialect": "mysql",
     "logging": false
   }

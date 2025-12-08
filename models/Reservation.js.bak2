@@ -8,7 +8,7 @@ module.exports = (sequelize, DataTypes) => {
         foreignKey: 'user_id',
         as: 'utilisateur'
       });
-
+      
       Reservation.belongsTo(models.Room, {
         foreignKey: 'room_id',
         as: 'salle'
@@ -18,14 +18,6 @@ module.exports = (sequelize, DataTypes) => {
         foreignKey: 'validee_par',
         as: 'validateur'
       });
-
-      // Lien vers le département (si présent)
-      if (models.Department) {
-        Reservation.belongsTo(models.Department, {
-          foreignKey: 'department_id',
-          as: 'department'
-        });
-      }
     }
   }
 
@@ -83,14 +75,6 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: true
     },
     commentaire_admin: {
-      type: DataTypes.TEXT,
-      allowNull: true
-    },
-    rejection_reason: {
-      type: DataTypes.TEXT,
-      allowNull: true,
-      comment: 'Motif du refus de la réservation'
-    },
     validee_par: {
       type: DataTypes.INTEGER,
       allowNull: true,
@@ -103,19 +87,7 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.DATE,
       allowNull: true
     },
-    department_id: {
-      type: DataTypes.INTEGER,
-      allowNull: true,
-      references: {
-        model: 'departments',
-        key: 'id'
-      }
-    },
-    group_id: {
-      type: DataTypes.STRING(36),
-      allowNull: true,
-      comment: "UUID pour regrouper les réservations multiples"
-    },
+    // Propriétés virtuelles pour compatibilité frontend
     date: {
       type: DataTypes.VIRTUAL,
       get() {
@@ -142,12 +114,27 @@ module.exports = (sequelize, DataTypes) => {
         return date.toTimeString().split(' ')[0].substring(0, 5);
       }
     }
+      type: DataTypes.TEXT,
+      allowNull: true
+    },
+    validee_par: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      references: {
+        model: 'users',
+        key: 'id'
+      }
+    },
+    validee_le: {
+      type: DataTypes.DATE,
+      allowNull: true
+    }
   }, {
     sequelize,
     modelName: 'Reservation',
     tableName: 'reservations',
-    timestamps: true,
-    underscored: false
+    underscored: false, // BDD utilise camelCase
+    timestamps: true
   });
 
   return Reservation;

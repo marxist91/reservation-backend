@@ -319,7 +319,7 @@ router.get("/dashboard", authMiddleware, verifyRole(ROLES_ROOM_VIEW), async (req
   }
 });
 
-router.put( "/update/:roomId", authMiddleware,autoAudit({ action: "UPDATE_ROOM", cibleType: "Room" }), verifyRole(["admin", "responsable"]), // admin ou responsable
+router.put( "/update/:roomId", authMiddleware, verifyRole(["admin", "responsable"]), // admin ou responsable
   async (req, res) => {
     try {
       const { roomId } = req.params;
@@ -329,18 +329,22 @@ router.put( "/update/:roomId", authMiddleware,autoAudit({ action: "UPDATE_ROOM",
         return res.status(404).json({ error: "📛 Salle introuvable" });
       }
 
-      req.auditSnapshot = salle.toJSON(); // 🧠 état avant modification
-
-      const { nom, capacite, responsable_id, description, statut } = req.body;
-      if (nom) salle.nom = nom;
-      if (capacite) salle.capacite = capacite;
-      if (responsable_id) salle.responsable_id = responsable_id;
-      if (description) salle.description = description;
-      if (statut) salle.statut = statut;
+      const { nom, capacite, responsable_id, description, statut, batiment, etage, superficie, equipements } = req.body;
+      
+      // Mettre à jour tous les champs fournis
+      if (nom !== undefined) salle.nom = nom;
+      if (capacite !== undefined) salle.capacite = capacite;
+      if (responsable_id !== undefined) salle.responsable_id = responsable_id;
+      if (description !== undefined) salle.description = description;
+      if (statut !== undefined) salle.statut = statut;
+      if (batiment !== undefined) salle.batiment = batiment;
+      if (etage !== undefined) salle.etage = etage;
+      if (superficie !== undefined) salle.superficie = superficie;
+      if (equipements !== undefined) salle.equipements = equipements;
 
       await salle.save();
 
-      return res.json({ success: true, updated: salle }); // ✅ intercepté par autoAudit
+      return res.json({ success: true, updated: salle });
     } catch (error) {
       console.error("❌ Erreur PUT /rooms/update/:id :", error);
       return res.status(500).json({ error: "Erreur serveur" });

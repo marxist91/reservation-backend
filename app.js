@@ -40,6 +40,16 @@ if (require('fs').existsSync('./routes/reservations.js')) {
   app.use('/api/reservations', require('./routes/reservations'));
 }
 
+// Routes des notifications
+if (require('fs').existsSync('./routes/notifications.js')) {
+  app.use('/api/notifications', require('./routes/notifications'));
+}
+
+// Routes de l'historique
+if (require('fs').existsSync('./routes/history.js')) {
+  app.use('/api/history', require('./routes/history'));
+}
+
 // Route de métadonnées
 app.use('/api/meta', (req, res) => {
   res.json({
@@ -152,6 +162,8 @@ app.use('/api/meta', require('./routes/meta')); // Route metadata
 app.use('/api/users', require('./routes/users'));
 app.use('/api/rooms', require('./routes/rooms'));
 app.use('/api/reservations', require('./routes/reservations'));
+app.use('/api/departments', require('./routes/departments'));
+app.use('/api/stats', require('./routes/stats'));
 
 // Route de base
 app.get('/', (req, res) => {
@@ -186,8 +198,10 @@ app.use(helmet({
 }));
 
 // 🌐 Configuration CORS
+// Autoriser le frontend local (Vite sur 5173) et l'ancien 3000 en dev
+const allowedOrigins = process.env.FRONTEND_URL ? [process.env.FRONTEND_URL] : ['http://localhost:3000', 'http://localhost:5173'];
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+  origin: allowedOrigins,
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']

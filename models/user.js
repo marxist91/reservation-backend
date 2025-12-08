@@ -22,6 +22,14 @@ module.exports = (sequelize, DataTypes) => {
         foreignKey: "user_id",
         as: "audit_logs"
       });
+
+      // Un utilisateur peut avoir plusieurs notifications
+      if (models.Notification) {
+        User.hasMany(models.Notification, {
+          foreignKey: "user_id",
+          as: "notifications"
+        });
+      }
     }
 
     // Méthode pour vérifier le mot de passe

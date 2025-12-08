@@ -2,7 +2,7 @@
 const router = express.Router();
 const fs = require("fs");
 
-const { Reservation, User, Room, Notification, History } = require("../models");
+const { Reservation, User, Room } = require("../models");
 const { Op } = require("sequelize");
 const authMiddleware = require("../middlewares/authMiddleware");
 const verifyRole = require("../middlewares/verifyRole");
@@ -180,120 +180,23 @@ router.get("/occupation", authMiddleware, verifyRole(ROLES_ROOM_VIEW), async (re
  *       500:
  *         description: Erreur serveur
  */
-router.put( "/validate/:id",authMiddleware, verifyRole(ROLES_RESERVATION_VALIDATION), async (req, res) => {
+router.put( "/validate/:id",authMiddleware, autoAudit({ action: "VALIDATE_RESERVATION", cibleType: "Reservation" }),verifyRole(ROLES_RESERVATION_VALIDATION), async (req, res) => {
     const { id } = req.params;
-    const { action, rejection_reason } = req.body; // 'valider' ou 'refuser'
 
     try {
-      // Récupérer la réservation avec les relations pour les notifications
-      const reservation = await Reservation.findByPk(id, {
-        include: [
-          { 
-            model: User, 
-            as: "utilisateur", 
-            attributes: ["id", "nom", "prenom", "email"] 
-          },
-          { 
-            model: Room, 
-            as: "salle", 
-            attributes: ["id", "nom"] 
-          }
-        ]
-      });
-
+      const reservation = await Reservation.findByPk(id);
       if (!reservation) {
-        return res.status(404).json({ error: "🚫 Réservation introuvable" });
+        return res.status(404).json({ error: "�??? Réservation introuvable" });
       }
 
-      // Gérer l'action (valider ou refuser)
-      if (action === 'refuser') {
-        // Validation : le motif du refus est obligatoire
-        if (!rejection_reason || rejection_reason.trim() === '') {
-          return res.status(400).json({ 
-            error: "Le motif du refus est obligatoire" 
-          });
-        }
+      req.auditSnapshot = reservation.toJSON(); // état avant validation
 
-        reservation.statut = "rejetee";
-        reservation.rejection_reason = rejection_reason;
-        await reservation.save();
+      reservation.statut = "validée"; // ou ton statut métier
+      await reservation.save();
 
-        // Créer notification en BDD
-        try {
-          const notif = await Notification.create({
-            user_id: reservation.user_id,
-            type: 'reservation_rejected',
-            titre: 'Réservation refusée',
-            message: `Votre réservation pour la salle "${reservation.salle?.nom || 'N/A'}" le ${reservation.date} a été refusée. Motif: ${rejection_reason}`,
-            reservation_id: reservation.id,
-            lu: false
-          });
-          console.log(`✅ Notification créée pour user ${reservation.user_id}:`, notif.id);
-        } catch (notifError) {
-          console.error("⚠️ Erreur création notification BDD:", notifError);
-        }
-
-        // Créer historique
-        try {
-          await History.create({
-            user_id: req.user.id, // Celui qui a fait l'action (admin/responsable)
-            type: 'REFUS',
-            action: 'Refus de réservation',
-            description: `La réservation a été refusée par ${req.user.nom || 'un administrateur'}. Motif: ${rejection_reason}`,
-            reservation_id: reservation.id,
-            details: { ancien_statut: 'en_attente', nouveau_statut: 'rejetee', motif_refus: rejection_reason }
-          });
-        } catch (histError) {
-          console.error("⚠️ Erreur création historique:", histError);
-        }
-
-        return res.json({ 
-          success: true, 
-          updated: reservation,
-          message: "Réservation refusée avec succès"
-        });
-      } else {
-        // Par défaut : validation
-        reservation.statut = "validée";
-        await reservation.save();
-
-        // Créer notification en BDD
-        try {
-          const notif = await Notification.create({
-            user_id: reservation.user_id,
-            type: 'reservation_validated',
-            titre: 'Réservation validée',
-            message: `Votre réservation pour la salle "${reservation.salle?.nom || 'N/A'}" le ${reservation.date} a été validée.`,
-            reservation_id: reservation.id,
-            lu: false
-          });
-          console.log(`✅ Notification créée pour user ${reservation.user_id}:`, notif.id);
-        } catch (notifError) {
-          console.error("⚠️ Erreur création notification BDD:", notifError);
-        }
-
-        // Créer historique
-        try {
-          await History.create({
-            user_id: req.user.id,
-            type: 'VALIDATION',
-            action: 'Validation de réservation',
-            description: `La réservation a été validée par ${req.user.nom || 'un administrateur'}.`,
-            reservation_id: reservation.id,
-            details: { ancien_statut: 'en_attente', nouveau_statut: 'validée' }
-          });
-        } catch (histError) {
-          console.error("⚠️ Erreur création historique:", histError);
-        }
-
-        return res.json({ 
-          success: true, 
-          updated: reservation,
-          message: "Réservation validée avec succès"
-        });
-      }
+      return res.json({ success: true, updated: reservation }); // capté par autoAudit
     } catch (error) {
-      console.error("⚠️ Erreur PUT /reservations/validate/:id :", error);
+      console.error("a�? Erreur PUT /reservations/validate/:id :", error);
       res.status(500).json({ error: "Erreur serveur" });
     }
   }
@@ -513,28 +416,13 @@ const badgeCreneau = (h) => {
 };
 
 // a��️ Durée humaine
-//  Durée humaine
 const calculerDurée = (debut, fin) => {
-  if (!debut || !fin) return "N/A";
-  
-  // Si ce sont des strings de temps (HH:MM ou HH:MM:SS)
-  if (typeof debut === 'string' && debut.includes(':')) {
-    const [h1, m1] = debut.split(":").map(Number);
-    const [h2, m2] = fin.split(":").map(Number);
-    const minutes = (h2 * 60 + m2) - (h1 * 60 + m1);
-    const h = Math.floor(minutes / 60);
-    const m = minutes % 60;
-    return `${h > 0 ? `${h}h` : ""}${m > 0 ? `${m}min` : ""}` || "0min";
-  }
-  
-  // Si ce sont des objets Date
-  const d1 = new Date(debut);
-  const d2 = new Date(fin);
-  const diffMs = d2 - d1;
-  const minutes = Math.floor(diffMs / (1000 * 60));
+  const [h1, m1] = debut.split(":").map(Number);
+  const [h2, m2] = fin.split(":").map(Number);
+  const minutes = (h2 * 60 + m2) - (h1 * 60 + m1);
   const h = Math.floor(minutes / 60);
   const m = minutes % 60;
-  return `${h > 0 ? `${h}h` : ""}${m > 0 ? `${m}min` : ""}` || "0min";
+  return `${h > 0 ? `${h}h` : ""}${m > 0 ? `${m}` : ""}${m > 0 ? "min" : ""}` || "a??";
 };
 
 /**
@@ -590,28 +478,21 @@ router.get("/all", authMiddleware, verifyRole(ROLES_RESERVATION_VIEW), async (re
       where: Object.keys(filtre).length > 0 ? filtre : undefined,
       include: [
         { model: Room, as: "salle", attributes: ["id", "nom"] },
-        { model: User, as: "utilisateur", attributes: ["id", "nom", "prenom", "email", "role"] }
+        { model: User, as: "utilisateur", attributes: ["id", "nom", "email", "role"] }
       ],
       order: [["date_debut", "ASC"]]
     });
 
     const enrichies = reservations.map(r => {
-      const statObj = BADGES_STATUT[r.statut] || { emoji: `❌ ${r.statut}`, css: "row-inconnu" };
+      const statObj = BADGES_STATUT[r.statut] || { emoji: `a�? ${r.statut}`, css: "row-inconnu" };
       const role = r.utilisateur?.role;
-      const icone_role = ICONES_ROLE[role] ?? `👤 ${role || "inconnu"}`;
+      const icone_role = ICONES_ROLE[role] ?? `�??� ${role || "inconnu"}`;
       return {
         id: r.id,
-        user_id: r.user_id,
-        room_id: r.room_id,
         date: r.date,
         heure_debut: r.heure_debut,
         heure_fin: r.heure_fin,
         statut: r.statut,
-        motif: r.motif,
-        rejection_reason: r.rejection_reason,
-        group_id: r.group_id,
-        createdAt: r.createdAt,
-        updatedAt: r.updatedAt,
         badge_statut: statObj.emoji,
         html_row_class: statObj.css,
         badge_creneau: badgeCreneau(r.heure_debut),
@@ -693,14 +574,12 @@ router.get("/all", authMiddleware, verifyRole(ROLES_RESERVATION_VIEW), async (re
  *         description: Conflit - salle déjà réservée
  */
 router.post("/create", authMiddleware, verifyMinimumRole("user"), async (req, res) => {
-  console.log("POST /create appelé - Body:", req.body);
-  const { room_id, date, heure_debut, heure_fin, statut, equipements_attribues, equipements_supplementaires, motif, nombre_participants, departement, department_id } = req.body;
+  const { room_id, date, heure_debut, heure_fin, statut, equipements_attribues, motif, nombre_participants } = req.body;
   const user_id = req.user.id;
 
   try {
     if (!room_id || !date || !heure_debut || !heure_fin) {
-      console.log("âŒ ParamÃ¨tres manquants");
-      return res.status(400).json({ error: "ParamÃ¨tres requis manquants" });
+      return res.status(400).json({ error: "Paramètres requis manquants" });
     }
 
     // Construction des objets Date
@@ -708,27 +587,24 @@ router.post("/create", authMiddleware, verifyMinimumRole("user"), async (req, re
     const endDateTime = new Date(`${date}T${heure_fin}`);
 
     if (isNaN(startDateTime.getTime()) || isNaN(endDateTime.getTime())) {
-      console.log("âŒ Format de date invalide");
       return res.status(400).json({ error: "Format de date ou d'heure invalide" });
     }
 
     if (endDateTime <= startDateTime) {
-      console.log("âŒ CrÃ©neau invalide");
       return res.status(400).json({
-        error: "CrÃ©neau invalide : l'heure de fin doit Ãªtre aprÃ¨s l'heure de dÃ©but"
+        error: "Créneau invalide : l'heure de fin doit être après l'heure de début"
       });
     }
 
-    // VÃ©rification de la durÃ©e minimale (30 min)
+    // Vérification de la durée minimale (30 min)
     const durationMinutes = (endDateTime - startDateTime) / (1000 * 60);
     if (durationMinutes < 30) {
-      console.log("âŒ DurÃ©e trop courte");
       return res.status(400).json({
-        error: "DurÃ©e trop courte : minimum 30 minutes requises"
+        error: "Durée trop courte : minimum 30 minutes requises"
       });
     }
 
-    // VÃ©rification des chevauchements
+    // Vérification des chevauchements
     const chevauchement = await Reservation.findOne({
       where: {
         room_id,
@@ -747,72 +623,27 @@ router.post("/create", authMiddleware, verifyMinimumRole("user"), async (req, re
     });
 
     if (chevauchement) {
-      console.log("âŒ Chevauchement dÃ©tectÃ©");
-      return res.status(409).json({ error: "La salle est dÃ©jÃ  rÃ©servÃ©e Ã  ce crÃ©neau." });
+      return res.status(409).json({ error: "La salle est déjà réservée à ce créneau." });
     }
 
-    // Gérer le département (si fourni en texte ou as id)
-    let departmentId = null;
-    if (department_id) {
-      departmentId = department_id;
-    } else if (departement && departement.trim()) {
-      const [dep] = await require('../models').Department.findOrCreate({ where: { name: departement.trim() } });
-      departmentId = dep.id;
-    }
-
-    console.log("📝 Création de la réservation...");
     const nouvelleReservation = await Reservation.create({
       user_id,
       room_id,
       date_debut: startDateTime,
       date_fin: endDateTime,
       statut: statut ?? "en_attente",
-      equipements_supplementaires: equipements_attribues || equipements_supplementaires,
+      equipements_supplementaires: equipements_attribues,
       motif: motif || "Réunion",
-      nombre_participants: nombre_participants || 1,
-      department_id: departmentId
+      nombre_participants: nombre_participants || 1
     });
 
-    // Notifier les admins
-    try {
-      const admins = await User.findAll({ where: { role: 'admin' } });
-      for (const admin of admins) {
-        await Notification.create({
-          user_id: admin.id,
-          type: 'new_reservation',
-          titre: 'Nouvelle demande de réservation',
-          message: `Nouvelle demande de réservation pour la salle (ID: ${room_id}) le ${date}.`,
-          reservation_id: nouvelleReservation.id,
-          lu: false
-        });
-      }
-    } catch (notifError) {
-      console.error("⚠️ Erreur création notification admin:", notifError);
-    }
-
-    // Créer historique
-    try {
-      await History.create({
-        user_id: req.user.id,
-        type: 'CREATION',
-        action: 'Demande de réservation',
-        description: `Nouvelle demande de réservation créée pour le ${date}.`,
-        reservation_id: nouvelleReservation.id,
-        details: { room_id, date, heure_debut, heure_fin }
-      });
-    } catch (histError) {
-      console.error("⚠️ Erreur création historique create:", histError);
-    }
-
-    console.log("✅ Réservation créée:", nouvelleReservation.id);
     return res.status(201).json({
-      message: "RÃ©servation crÃ©Ã©e",
+      message: "Réservation créée",
       reservation: nouvelleReservation
     });
   } catch (error) {
-    console.error("âŒ Erreur POST/api/reservations/create:", error.message);
-    console.error("Stack:", error.stack);
-    return res.status(500).json({ error: "Erreur serveur", details: error.message });
+    console.error("a�? Erreur POST/api/reservations/create :", error);
+    return res.status(500).json({ error: "Erreur serveur" });
   }
 });
 
@@ -862,7 +693,7 @@ router.post("/create", authMiddleware, verifyMinimumRole("user"), async (req, re
  *       500:
  *         description: Erreur serveur
  */
-router.delete( "/delete/:id",authMiddleware,verifyRole("admin"),async (req, res) => {
+router.delete( "/delete/:id",authMiddleware,autoAudit({ action: "DELETE_RESERVATION", cibleType: "Reservation" }),verifyRole("admin"),async (req, res) => {
     try {
       const { id } = req.params;
       const reservation = await Reservation.findByPk(id);
@@ -871,25 +702,8 @@ router.delete( "/delete/:id",authMiddleware,verifyRole("admin"),async (req, res)
         return res.status(404).json({ error: "�??? Réservation introuvable" });
       }
 
+      req.auditSnapshot = reservation.toJSON(); // avant suppression
       await reservation.destroy();
-
-      // Créer historique
-      try {
-        await History.create({
-            user_id: req.user.id,
-            type: 'SUPPRESSION',
-            action: 'Suppression de réservation',
-            description: `La réservation #${id} a été supprimée définitivement par l'administrateur.`,
-            reservation_id: null, // La réservation n'existe plus
-            details: { 
-                ancien_id: id,
-                salle_id: reservation.room_id,
-                date: reservation.date_debut
-            }
-        });
-      } catch (e) {
-        console.error("Erreur création historique delete:", e);
-      }
 
       res.json({ success: true, deletedId: id });
     } catch (error) {
@@ -956,7 +770,7 @@ router.delete( "/delete/:id",authMiddleware,verifyRole("admin"),async (req, res)
  *       500:
  *         description: Erreur serveur
  */
-router.put("/assign/:id",authMiddleware,verifyRole("admin"),async (req, res) => {
+router.put("/assign/:id",authMiddleware,autoAudit({ action: "ASSIGN_RESPONSABLE", cibleType: "Reservation" }),verifyRole("admin"),async (req, res) => {
     const { id } = req.params;
     const { responsable_id } = req.body;
 
@@ -965,6 +779,8 @@ router.put("/assign/:id",authMiddleware,verifyRole("admin"),async (req, res) => 
       if (!reservation) {
         return res.status(404).json({ error: "�??? Réservation introuvable" });
       }
+
+      req.auditSnapshot = reservation.toJSON(); // avant mutation
 
       reservation.responsable_id = responsable_id;
       await reservation.save();
@@ -1051,7 +867,7 @@ router.put("/assign/:id",authMiddleware,verifyRole("admin"),async (req, res) => 
  */
 
 // PUT /api/reservations/update/:id - Modification avec notifications (MEDIUM)
-router.put("/update/:id",authMiddleware,verifyRole(ROLES_RESERVATION_VALIDATION),async (req, res) => {
+router.put("/update/:id",authMiddleware,autoAudit({ action: "UPDATE_RESERVATION", cibleType: "Reservation" }),verifyRole(ROLES_RESERVATION_VALIDATION),async (req, res) => {
     const { id } = req.params;
     const { statut, ...autresChamps } = req.body;
 
@@ -1101,8 +917,6 @@ router.put("/update/:id",authMiddleware,verifyRole(ROLES_RESERVATION_VALIDATION)
       const utilisateur = reservation.utilisateur;
       const salle = reservation.salle;
       const notifications = [];
-      let historyAction = "Mise à jour";
-      let historyType = "MODIFICATION";
 
       // �??� Notification pour changement de statut
       if (statut && statut !== ancienStatut) {
@@ -1124,44 +938,6 @@ Statut précédent : ${ancienStatut}
           "logs/reservation_notifications.log", 
           `${new Date().toISOString()} | user:${utilisateur.email} | statut:${statut} | id:${reservation.id}\n`
         );
-
-        // --- AJOUT: Notification BDD et Historique ---
-        let notifType = 'status_change';
-        let notifTitre = 'Statut modifié';
-        
-        if (statut === 'annulee') {
-            notifType = 'reservation_cancelled';
-            notifTitre = 'Réservation annulée';
-            historyType = 'ANNULATION';
-            historyAction = 'Annulation de réservation';
-        } else if (statut === 'validée') {
-            notifType = 'reservation_validated';
-            notifTitre = 'Réservation validée';
-            historyType = 'VALIDATION';
-            historyAction = 'Validation de réservation';
-        } else if (statut === 'rejetee') {
-            notifType = 'reservation_rejected';
-            notifTitre = 'Réservation refusée';
-            historyType = 'REFUS';
-            historyAction = 'Refus de réservation';
-        } else {
-             historyAction = `Changement de statut: ${statut}`;
-        }
-
-        try {
-            await Notification.create({
-                user_id: reservation.user_id,
-                type: notifType,
-                titre: notifTitre,
-                message: `Le statut de votre réservation est passé de "${ancienStatut}" à "${statut}".`,
-                reservation_id: reservation.id,
-                lu: false
-            });
-        } catch (e) {
-            console.error("Erreur création notif BDD update:", e);
-        }
-
-
       }
 
       // �??� Notification pour changement de date
@@ -1180,20 +956,6 @@ Horaire : ${reservation.heure_debut} - ${reservation.heure_fin}
           message: messageDate,
           subject: 'Mise à jour de votre réservation - Changement de date'
         });
-
-        // Notif BDD pour date
-        try {
-            await Notification.create({
-                user_id: reservation.user_id,
-                type: 'reservation_modified',
-                titre: 'Date modifiée',
-                message: `La date de votre réservation a été modifiée de ${ancienneDate} à ${autresChamps.date}.`,
-                reservation_id: reservation.id,
-                lu: false
-            });
-        } catch (e) { console.error(e); }
-        
-        historyAction += `, Date modifiée`;
       }
 
       // �??� Notification pour changement d'horaire
@@ -1212,46 +974,6 @@ Nouvel horaire : ${reservation.heure_debut} - ${reservation.heure_fin}
           message: messageHoraire,
           subject: 'Mise à jour de votre réservation - Changement d\'horaire'
         });
-
-         // Notif BDD pour horaire
-         try {
-            await Notification.create({
-                user_id: reservation.user_id,
-                type: 'reservation_modified',
-                titre: 'Horaire modifié',
-                message: `L'horaire de votre réservation a été modifié.`,
-                reservation_id: reservation.id,
-                lu: false
-            });
-        } catch (e) { console.error(e); }
-
-        historyAction += `, Horaire modifié`;
-      }
-
-      // Création historique GLOBAL pour la modification
-      try {
-        // Si on a juste changé des champs sans changer le statut, c'est une MODIFICATION
-        if (!statut || statut === ancienStatut) {
-            historyType = 'MODIFICATION';
-        }
-
-        await History.create({
-            user_id: req.user.id,
-            type: historyType,
-            action: historyAction,
-            description: `Modification de la réservation ${reservation.id}.`,
-            reservation_id: reservation.id,
-            details: { 
-                ancien_statut: ancienStatut, 
-                nouveau_statut: reservation.statut,
-                ancienne_date: ancienneDate,
-                nouvelle_date: reservation.date,
-                ancien_horaire: `${ancienneHeureDebut}-${ancienneHeureFin}`,
-                nouvel_horaire: `${reservation.heure_debut}-${reservation.heure_fin}`
-            }
-        });
-      } catch (e) {
-        console.error("Erreur création historique update:", e);
       }
 
       // Envoyer toutes les notifications
@@ -1335,272 +1057,5 @@ Nouvel horaire : ${reservation.heure_debut} - ${reservation.heure_fin}
     }
   }
 );
-/**
- * @swagger
- * /api/reservations/create-multiple:
- *   post:
- *     summary: Créer plusieurs réservations (multi-créneaux ou multi-jours)
- *     tags: [Reservations]
- *     security:
- *       - bearerAuth: []
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               room_id:
- *                 type: integer
- *               motif:
- *                 type: string
- *               description:
- *                 type: string
- *               isMultiDay:
- *                 type: boolean
- *               date_debut:
- *                 type: string
- *                 format: date
- *               date_fin:
- *                 type: string
- *                 format: date
- *               timeSlots:
- *                 type: array
- *                 items:
- *                   type: object
- *                   properties:
- *                     heure_debut:
- *                       type: string
- *                     heure_fin:
- *                       type: string
- *     responses:
- *       201:
- *         description: Réservations créées avec succès
- *       400:
- *         description: Données invalides
- *       409:
- *         description: Conflit de créneaux
- */
-router.post("/create-multiple", authMiddleware, async (req, res) => {
-  const { room_id, motif, description, isMultiDay, date_debut, date_fin, timeSlots, departement, department_id } = req.body;
-  const userId = req.user.id;
-  const crypto = require('crypto');
-
-  if (!room_id || !motif || !timeSlots || timeSlots.length === 0) {
-    return res.status(400).json({ error: "Données manquantes (salle, motif, créneaux)" });
-  }
-
-  const t = await Reservation.sequelize.transaction();
-
-  try {
-    const groupId = crypto.randomUUID();
-    const reservationsToCreate = [];
-    
-    // Calcul des dates
-    let dates = [];
-    if (isMultiDay && date_debut && date_fin) {
-      let current = new Date(date_debut);
-      const end = new Date(date_fin);
-      // Sécurité pour éviter boucle infinie
-      if (current > end) {
-         throw new Error("La date de début doit être avant la date de fin");
-      }
-      
-      // Limite de sécurité (ex: 30 jours max)
-      const diffTime = Math.abs(end - current);
-      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
-      if (diffDays > 31) {
-          throw new Error("La période de réservation ne peut pas dépasser 31 jours");
-      }
-
-      while (current <= end) {
-        dates.push(new Date(current));
-        current.setDate(current.getDate() + 1);
-      }
-    } else {
-      dates.push(new Date(date_debut));
-    }
-
-    // Gérer le département (texte ou id)
-    let departmentId = null;
-    if (department_id) {
-      departmentId = department_id;
-    } else if (departement && departement.trim()) {
-      const [dep] = await require('../models').Department.findOrCreate({ where: { name: departement.trim() } });
-      departmentId = dep.id;
-    }
-
-    // Génération des objets de réservation
-    for (const date of dates) {
-      const dateStr = date.toISOString().split('T')[0];
-      
-      for (const slot of timeSlots) {
-        // Construction des dates complètes
-        // Attention: slot.heure_debut est "HH:mm:ss" ou "HH:mm"
-        const startDateTime = new Date(`${dateStr}T${slot.heure_debut}`);
-        const endDateTime = new Date(`${dateStr}T${slot.heure_fin}`);
-
-        // Validation basique
-        if (endDateTime <= startDateTime) {
-           throw new Error(`Heure de fin invalide pour le créneau ${slot.heure_debut} - ${slot.heure_fin} le ${dateStr}`);
-        }
-
-        reservationsToCreate.push({
-          user_id: userId,
-          room_id,
-          date_debut: startDateTime,
-          date_fin: endDateTime,
-          motif: description ? `${motif}\n\n${description}` : motif,
-          statut: 'en_attente',
-          group_id: groupId
-          ,department_id: departmentId
-        });
-      }
-    }
-
-    // Vérification des conflits pour TOUTES les réservations
-    for (const resData of reservationsToCreate) {
-      const conflict = await Reservation.findOne({
-        where: {
-          room_id: resData.room_id,
-          statut: { [Op.notIn]: ['annulee', 'rejetee'] },
-          [Op.or]: [
-            {
-              date_debut: { [Op.lt]: resData.date_fin },
-              date_fin: { [Op.gt]: resData.date_debut }
-            }
-          ]
-        },
-        transaction: t
-      });
-
-      if (conflict) {
-        throw new Error(`Conflit de réservation le ${resData.date_debut.toLocaleString()} avec une réservation existante.`);
-      }
-    }
-
-    // Création en masse
-    const createdReservations = await Reservation.bulkCreate(reservationsToCreate, { transaction: t });
-
-    // Création de la notification pour l'utilisateur
-    await Notification.create({
-      user_id: userId,
-      type: 'reservation_created_group',
-      titre: 'Réservation multiple créée',
-      message: `Votre demande de réservation multiple (${createdReservations.length} créneaux) pour la salle ${room_id} a été enregistrée et est en attente de validation.`,
-      reservation_id: createdReservations[0].id 
-    }, { transaction: t });
-
-    // Notification pour les admins (ceux qui ont le rôle 'admin' ou 'responsable')
-    // On récupère les admins
-    const admins = await User.findAll({
-      where: {
-        role: { [Op.in]: ['admin', 'responsable'] }
-      },
-      attributes: ['id', 'email'],
-      transaction: t
-    });
-
-    // Création des notifications pour les admins
-    const adminNotifications = admins.map(admin => ({
-      user_id: admin.id,
-      type: 'admin_new_reservation_group',
-      titre: 'Nouvelle demande de réservation multiple',
-      message: `Une nouvelle demande de réservation multiple (${createdReservations.length} créneaux) a été créée par l'utilisateur ${userId}.`,
-      reservation_id: createdReservations[0].id
-    }));
-
-    if (adminNotifications.length > 0) {
-      await Notification.bulkCreate(adminNotifications, { transaction: t });
-    }
-
-    // Envoi d'emails (hors transaction pour ne pas bloquer)
-    // On le fait après le commit idéalement, mais ici on prépare les données
-    // Pour simplifier, on envoie un email générique à l'utilisateur
-    try {
-        const user = await User.findByPk(userId, { transaction: t });
-        if (user && user.email) {
-            // Utilisation de sendNotification qui loggue ou envoie selon la config
-            // Note: sendNotification est asynchrone mais on ne l'attend pas forcément pour ne pas ralentir la réponse
-            // Cependant, si on veut être sûr, on peut l'attendre.
-            // Ici on utilise sendEmail directement si disponible ou sendNotification
-            
-            // On utilise sendNotification pour la cohérence avec le reste du projet
-            // Mais sendNotification semble juste logger dans un fichier pour l'instant (mode debug)
-            // Si on veut un vrai email, il faut utiliser sendEmail (services/mailer.js)
-            
-            // Envoi email utilisateur
-            sendEmail({
-                to: user.email,
-                subject: 'Confirmation de demande de réservation multiple',
-                html: `
-                    <h1>Demande enregistrée</h1>
-                    <p>Bonjour ${user.prenom} ${user.nom},</p>
-                    <p>Votre demande de réservation multiple a bien été prise en compte.</p>
-                    <p><strong>Détails :</strong></p>
-                    <ul>
-                        <li>Nombre de créneaux : ${createdReservations.length}</li>
-                        <li>Salle ID : ${room_id}</li>
-                        <li>Motif : ${motif}</li>
-                    </ul>
-                    <p>Vous recevrez une notification dès qu'elle sera traitée.</p>
-                `
-            }).catch(err => console.error("Erreur envoi email user:", err));
-
-            // Envoi email aux admins
-            for (const admin of admins) {
-                if (admin.email) {
-                    sendEmail({
-                        to: admin.email,
-                        subject: 'Nouvelle demande de réservation multiple',
-                        html: `
-                            <h1>Nouvelle demande à valider</h1>
-                            <p>L'utilisateur ${user.prenom} ${user.nom} a fait une demande de réservation multiple.</p>
-                            <p><strong>Détails :</strong></p>
-                            <ul>
-                                <li>Nombre de créneaux : ${createdReservations.length}</li>
-                                <li>Salle ID : ${room_id}</li>
-                            </ul>
-                            <p>Merci de vous connecter pour valider ou refuser.</p>
-                        `
-                    }).catch(err => console.error("Erreur envoi email admin:", err));
-                }
-            }
-        }
-    } catch (emailError) {
-        console.error("Erreur lors de la préparation des emails:", emailError);
-    }
-
-    // Création de l'historique
-    const historyRecords = createdReservations.map((r, index) => ({
-      user_id: userId,
-      type: 'CREATION',
-      action: 'Demande de réservation (Groupe)',
-      description: `Réservation multiple - Créneau ${index + 1}/${createdReservations.length} : ${r.date} de ${r.heure_debut} à ${r.heure_fin}`,
-      reservation_id: r.id,
-      details: { group_id: groupId, motif, total_count: createdReservations.length }
-    }));
-    
-    await History.bulkCreate(historyRecords, { transaction: t });
-
-    await t.commit();
-
-    res.status(201).json({
-      success: true,
-      message: `${createdReservations.length} réservations créées avec succès`,
-      group_id: groupId,
-      reservations: createdReservations
-    });
-
-  } catch (error) {
-    await t.rollback();
-    console.error("Erreur create-multiple:", error);
-    res.status(400).json({ error: error.message || "Erreur lors de la création des réservations multiples" });
-  }
-});
-
 module.exports = router;
-
-
-
 
