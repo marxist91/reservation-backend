@@ -49,27 +49,37 @@ const config = {
     
     if (mysqlUrl) {
       // Parser l'URL MySQL de Railway
-      const url = new URL(mysqlUrl);
-      return {
-        username: url.username,
-        password: url.password,
-        database: url.pathname.slice(1), // Enlever le /
-        host: url.hostname,
-        port: parseInt(url.port) || 3306,
-        dialect: 'mysql',
-        logging: false,
-        pool: {
-          max: 20,
-          min: 5,
-          acquire: 60000,
-          idle: 300000
-        },
-        define: {
-          timestamps: true,
-          underscored: true,
-          freezeTableName: true
-        }
-      };
+      try {
+        const url = new URL(mysqlUrl);
+        console.log("🔍 MYSQL_URL parsé:", {
+          host: url.hostname,
+          port: url.port,
+          user: url.username,
+          database: url.pathname.slice(1)
+        });
+        return {
+          username: url.username,
+          password: decodeURIComponent(url.password),
+          database: url.pathname.slice(1), // Enlever le /
+          host: url.hostname,
+          port: parseInt(url.port) || 3306,
+          dialect: 'mysql',
+          logging: false,
+          pool: {
+            max: 20,
+            min: 5,
+            acquire: 60000,
+            idle: 300000
+          },
+          define: {
+            timestamps: true,
+            underscored: true,
+            freezeTableName: true
+          }
+        };
+      } catch (e) {
+        console.error("❌ Erreur parsing MYSQL_URL:", e.message);
+      }
     }
     
     // Fallback aux variables individuelles
