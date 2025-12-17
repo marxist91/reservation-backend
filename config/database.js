@@ -83,12 +83,19 @@ const config = {
     }
     
     // Fallback aux variables individuelles
+    console.log("🔍 DEBUG DB Variables:", {
+      DB_HOST: process.env.DB_HOST,
+      DB_PORT: process.env.DB_PORT,
+      DB_USERNAME: process.env.DB_USERNAME,
+      DB_NAME: process.env.DB_NAME,
+      DB_PASSWORD: process.env.DB_PASSWORD ? "****" : "NON DÉFINI"
+    });
     return {
       username: process.env.DB_USERNAME || 'root',
       password: process.env.DB_PASSWORD || '',
       database: process.env.DB_NAME,
       host: process.env.DB_HOST,
-      port: process.env.DB_PORT || 3306,
+      port: parseInt(process.env.DB_PORT) || 3306,
       dialect: 'mysql',
       logging: false,
       pool: {
