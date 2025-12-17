@@ -10,6 +10,12 @@ if (process.env.NODE_ENV === 'test') {
   require('dotenv').config();
 }
 
+// DEBUG: Afficher les variables DB au démarrage
+console.log("🔍 DEBUG Variables d'environnement:");
+console.log("  NODE_ENV:", process.env.NODE_ENV);
+console.log("  MYSQL_URL:", process.env.MYSQL_URL ? process.env.MYSQL_URL.substring(0, 50) + "..." : "NON DÉFINI");
+console.log("  DB_HOST:", process.env.DB_HOST || "NON DÉFINI");
+
 const express = require("express");
 const cors = require("cors");
 const helmet = require("helmet");
