@@ -43,34 +43,63 @@ const config = {
     }
   },
   
-  production: {
-    // In production the env vars should be set, but default to root/empty if not provided
-    username: process.env.DB_USERNAME || 'root',
-    password: process.env.DB_PASSWORD || '',
-    database: process.env.DB_NAME,
-    host: process.env.DB_HOST,
-    port: process.env.DB_PORT || 3306,
-    dialect: 'mysql',
-    logging: false, // Pas de logs en production
-    pool: {
-      max: 20,
-      min: 5,
-      acquire: 60000,
-      idle: 300000
-    },
-    define: {
-      timestamps: true,
-      underscored: true,
-      freezeTableName: true
-    },
-    // Configuration SSL pour la production si nécessaire
-    dialectOptions: process.env.DB_SSL === 'true' ? {
-      ssl: {
-        require: true,
-        rejectUnauthorized: false
-      }
-    } : {}
-  }
+  production: (() => {
+    // Support Railway MYSQL_URL ou variables individuelles
+    const mysqlUrl = process.env.MYSQL_URL || process.env.DATABASE_URL;
+    
+    if (mysqlUrl) {
+      // Parser l'URL MySQL de Railway
+      const url = new URL(mysqlUrl);
+      return {
+        username: url.username,
+        password: url.password,
+        database: url.pathname.slice(1), // Enlever le /
+        host: url.hostname,
+        port: parseInt(url.port) || 3306,
+        dialect: 'mysql',
+        logging: false,
+        pool: {
+          max: 20,
+          min: 5,
+          acquire: 60000,
+          idle: 300000
+        },
+        define: {
+          timestamps: true,
+          underscored: true,
+          freezeTableName: true
+        }
+      };
+    }
+    
+    // Fallback aux variables individuelles
+    return {
+      username: process.env.DB_USERNAME || 'root',
+      password: process.env.DB_PASSWORD || '',
+      database: process.env.DB_NAME,
+      host: process.env.DB_HOST,
+      port: process.env.DB_PORT || 3306,
+      dialect: 'mysql',
+      logging: false,
+      pool: {
+        max: 20,
+        min: 5,
+        acquire: 60000,
+        idle: 300000
+      },
+      define: {
+        timestamps: true,
+        underscored: true,
+        freezeTableName: true
+      },
+      dialectOptions: process.env.DB_SSL === 'true' ? {
+        ssl: {
+          require: true,
+          rejectUnauthorized: false
+        }
+      } : {}
+    };
+  })()
 };
 
 // Récupérer la configuration selon l'environnement
