@@ -11,12 +11,14 @@ if (process.env.NODE_ENV === 'test') {
 }
 
 // DEBUG: Afficher les variables DB au démarrage
+console.log("========================================");
 console.log("🔍 DEBUG Variables d'environnement:");
 console.log("  NODE_ENV:", process.env.NODE_ENV);
-console.log("  DATABASE_URL:", process.env.DATABASE_URL ? process.env.DATABASE_URL.substring(0, 60) + "..." : "NON DÉFINI");
-console.log("  MYSQL_URL:", process.env.MYSQL_URL ? process.env.MYSQL_URL.substring(0, 60) + "..." : "NON DÉFINI");
+console.log("  DATABASE_URL:", process.env.DATABASE_URL ? "DÉFINI (" + process.env.DATABASE_URL.substring(0, 30) + "...)" : "NON DÉFINI");
+console.log("  MYSQL_URL:", process.env.MYSQL_URL ? "DÉFINI" : "NON DÉFINI");
 console.log("  DB_HOST:", process.env.DB_HOST || "NON DÉFINI");
 console.log("  DB_PORT:", process.env.DB_PORT || "NON DÉFINI");
+console.log("========================================");
 
 const express = require("express");
 const cors = require("cors");
