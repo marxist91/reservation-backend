@@ -13,7 +13,8 @@ Système complet de réservation de salles avec API REST, authentification JWT, 
 - 📅 **Réservations intelligentes** avec vérification de disponibilité
 - 🔍 **Système d'audit complet** avec traçabilité des actions
 - 🔔 **Notifications en temps réel** pour les utilisateurs
-- 📚 **Documentation automatique** avec génération multi-format
+- � **Notifications par email** avec templates HTML professionnels
+- �📚 **Documentation automatique** avec génération multi-format
 - 🧪 **Validation et tests** automatisés
 - 🎛️ **Interface d'administration** avancée
 
@@ -60,6 +61,30 @@ npm run docs:serve
 ```
 
 **🌐 Accès**: http://localhost:3000 (API) | http://localhost:8080 (Documentation)
+
+### 4. Configuration des notifications email (Optionnel mais recommandé)
+
+```bash
+# Configuration rapide (5 minutes)
+# Voir EMAIL_SETUP.md pour le guide complet
+
+# 1. Éditer .env
+nano .env
+
+# 2. Ajouter vos identifiants Gmail (ou autre)
+EMAIL_HOST=smtp.gmail.com
+EMAIL_PORT=587
+EMAIL_USER=votre.email@gmail.com
+EMAIL_PASSWORD=xxxx_xxxx_xxxx_xxxx  # Mot de passe d'application
+
+# 3. Tester
+node test-email.js
+
+# 4. Redémarrer le serveur
+npm run dev
+```
+
+📚 **Documentation complète**: [EMAIL_SETUP.md](EMAIL_SETUP.md) | [docs/CONFIGURATION_EMAIL.md](docs/CONFIGURATION_EMAIL.md)
 
 ## 📋 Structure du projet
 

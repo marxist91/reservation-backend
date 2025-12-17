@@ -142,7 +142,7 @@ The smoke tests verify:
 
 ### Database Configuration
 - **Test Database**: `reservation_salles`
-- **Credentials**: `marcel_admin` / `Reservation2025!`
+- <!-- **Credentials**: `marcel_admin` / `Reservation2025!` -->
 - **Host**: `localhost`
 - **Dialect**: `mysql`
 

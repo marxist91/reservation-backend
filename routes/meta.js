@@ -89,6 +89,20 @@ router.get('/meta', async (req, res) => {
       request_id: `meta_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
     };
 
+    // Lire le flag de purge si présent
+    try {
+      const fs = require('fs');
+      const flagPath = require('path').resolve(__dirname, '..', 'data', 'purge_flags.json');
+      if (fs.existsSync(flagPath)) {
+        const flags = JSON.parse(fs.readFileSync(flagPath, 'utf8'));
+        meta.flags = flags;
+      } else {
+        meta.flags = { departments_responsables_purged: null };
+      }
+    } catch (flagErr) {
+      meta.flags = { departments_responsables_purged: null };
+    }
+
     res.json(meta);
   } catch (error) {
     console.error('❌ Erreur GET /api/meta:', error);

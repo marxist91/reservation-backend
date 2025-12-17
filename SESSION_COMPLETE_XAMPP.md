@@ -106,7 +106,7 @@ Tous les seeders harmonisés avec:
 | Table | Nombre | Détails |
 |-------|--------|---------|
 | **users** | 8 | admin@port-autonome.com (admin), jean.dupont + sophie.martin (responsables), 5 users |
-| **rooms** | 12 | Capacités: 6-150, Prix: 10-150€/h, Bâtiments: Principal, Annexe, Technique |
+<!-- | **rooms** | 12 | Capacités: 6-150, Prix: 10-150€/h, Bâtiments: Principal, Annexe, Technique | -->
 | **reservations** | 10 | Statuts: 3 validées, 2 en_attente, 2 confirmées, 1 annulée, 1 rejetée, 1 terminée |
 | **audit_logs** | 0 | Table créée, prête à enregistrer les actions |
 | **action_logs** | 0 | Table créée, prête à enregistrer les logs |
@@ -137,9 +137,9 @@ Authorization: Bearer [TOKEN]
 ```
 
 **Échantillon:**
-- ID1: Salle de Conférence A - Capacité: 50 - Prix: 75€/h - Statut: disponible
-- ID11: Auditorium - Capacité: 150 - Prix: 150€/h - Statut: disponible
-- ID4: Bureau Partagé 1 - Capacité: 6 - Prix: 15€/h - Statut: disponible
+- <!-- ID1: Salle de Conférence A - Capacité: 50 - Prix: 75€/h - Statut: disponible -->
+- <!-- ID11: Auditorium - Capacité: 150 - Prix: 150€/h - Statut: disponible -->
+- <!-- ID4: Bureau Partagé 1 - Capacité: 6 - Prix: 15€/h - Statut: disponible -->
 
 ### 4. Liste des Réservations
 ```http
@@ -274,7 +274,7 @@ node server.js
 
 ### Vérifier la base
 ```powershell
-mysql -u marcel_admin -p"Reservation2025!" reservation_salles
+<!-- mysql commands for marcel_admin removed -->
 ```
 
 ### Réinitialiser les seeders
@@ -315,7 +315,7 @@ npx sequelize-cli db:migrate:undo
 ### .env
 ```env
 DB_HOST=localhost
-DB_USER=marcel_admin
+<!-- DB_USER removed (use DB_USERNAME=root) -->
 DB_PASSWORD=Reservation2025!
 DB_NAME=reservation_salles
 DB_PORT=3306
@@ -329,7 +329,7 @@ JWT_EXPIRES_IN=7d
 ```json
 {
   "development": {
-    "username": "marcel_admin",
+    <!-- username references removed -->
     "password": "Reservation2025!",
     "database": "reservation_salles",
     "host": "localhost",

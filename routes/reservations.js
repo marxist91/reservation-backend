@@ -2,7 +2,7 @@
 const router = express.Router();
 const fs = require("fs");
 
-const { Reservation, User, Room, Notification, History } = require("../models");
+const { Reservation, User, Room, Notification, History, Department } = require("../models");
 const { Op } = require("sequelize");
 const authMiddleware = require("../middlewares/authMiddleware");
 const verifyRole = require("../middlewares/verifyRole");
@@ -12,12 +12,69 @@ const verifyMinimumRole = require("../middlewares/verifyMinimumRole");
 const { horairesValides, dureeMinimale } = require("../utils/validations");
 const {RESERVATION_STATUTS, ROLES_RESERVATION_VALIDATION} = require("../constants/permissions");
 const { ROLES_ROOM_VIEW,ROLES_RESERVATION_VIEW , } = require("../constants/permissions");
-//const sendEmail = require("../utils/sendEmail"); // utilitaire à créer
+const emailService = require("../services/emailService");
 const sendNotification = require("../utils/sendNotification");
-const sendEmail = require("../services/mailer");
 const ACTIONS = require("../constants/actions");
 
 const safeResponse = require("../utils/safeResponse");
+
+// 📋 Route publique - Liste de TOUTES les réservations (pour page d'accueil)
+router.get("/all-public", async (req, res) => {
+  const { date, room_id } = req.query;
+
+  const filtre = {}; // Pas de filtre sur le statut - afficher TOUTES les réservations
+  
+  if (date) {
+    const startOfDay = new Date(date);
+    startOfDay.setHours(0, 0, 0, 0);
+    const endOfDay = new Date(date);
+    endOfDay.setHours(23, 59, 59, 999);
+    
+    filtre.date_debut = {
+      [Op.between]: [startOfDay, endOfDay]
+    };
+  }
+  if (room_id) filtre.room_id = room_id;
+
+  try {
+    const reservations = await Reservation.findAll({
+      where: Object.keys(filtre).length > 0 ? filtre : undefined,
+      include: [
+        { model: Room, as: "salle", attributes: ["id", "nom", "statut"] },
+        { model: User, as: "utilisateur", attributes: ["id", "nom", "prenom"] }
+      ],
+      order: [["date_debut", "ASC"]]
+    });
+
+    console.log(`📊 Route /all-public: ${reservations.length} réservations trouvées`);
+    console.log('📋 Statuts:', reservations.map(r => r.statut).filter((v, i, a) => a.indexOf(v) === i));
+
+    const data = reservations.map(r => ({
+      id: r.id,
+      user_id: r.user_id,
+      room_id: r.room_id,
+      date: r.date,
+      date_debut: r.date_debut,
+      date_fin: r.date_fin,
+      heure_debut: r.heure_debut,
+      heure_fin: r.heure_fin,
+      statut: r.statut,
+      motif: r.motif,
+      group_id: r.group_id,
+      rejection_reason: r.rejection_reason,
+      salle: r.salle,
+      utilisateur: r.utilisateur
+    }));
+
+    return res.json({ data });
+  } catch (error) {
+    console.error("Erreur GET /api/reservations/all-public :", error);
+    return res.status(500).json({
+      error: "Erreur serveur",
+      message: error.message
+    });
+  }
+});
 
 /**
  * @swagger
@@ -182,7 +239,7 @@ router.get("/occupation", authMiddleware, verifyRole(ROLES_ROOM_VIEW), async (re
  */
 router.put( "/validate/:id",authMiddleware, verifyRole(ROLES_RESERVATION_VALIDATION), async (req, res) => {
     const { id } = req.params;
-    const { action, rejection_reason } = req.body; // 'valider' ou 'refuser'
+    const { action, rejection_reason, proposed_alternative } = req.body; // 'valider' ou 'refuser', avec option d'alternative
 
     try {
       // Récupérer la réservation avec les relations pour les notifications
@@ -218,30 +275,66 @@ router.put( "/validate/:id",authMiddleware, verifyRole(ROLES_RESERVATION_VALIDAT
         reservation.rejection_reason = rejection_reason;
         await reservation.save();
 
-        // Créer notification en BDD
-        try {
-          const notif = await Notification.create({
+        // Si une salle alternative est proposée
+        if (proposed_alternative && proposed_alternative.proposed_room_id && proposed_alternative.proposed_date_debut && proposed_alternative.proposed_date_fin) {
+          const { ProposedAlternative } = require('../models');
+          
+          try {
+            const alternative = await ProposedAlternative.create({
+              original_reservation_id: reservation.id,
+              proposed_room_id: proposed_alternative.proposed_room_id,
+              proposed_date_debut: proposed_alternative.proposed_date_debut,
+              proposed_date_fin: proposed_alternative.proposed_date_fin,
+              motif: proposed_alternative.motif || 'Salle alternative proposée',
+              proposed_by: req.user.id,
+              status: 'pending'
+            });
+
+            console.log('✅ Proposition alternative créée:', alternative.id);
+
+            // Notification pour l'utilisateur avec proposition alternative
+            await Notification.create({
+              user_id: reservation.user_id,
+              type: 'alternative_proposed',
+              titre: 'Proposition de salle alternative',
+              message: `Votre réservation a été refusée. Une salle alternative vous a été proposée. Consultez vos notifications pour accepter ou refuser.`,
+              reservation_id: reservation.id,
+              lien: '/reservations',
+              lue: false
+            });
+          } catch (altError) {
+            console.error("⚠️ Erreur création alternative:", altError);
+          }
+        } else {
+          // Notification normale de refus sans alternative
+          await Notification.create({
             user_id: reservation.user_id,
             type: 'reservation_rejected',
             titre: 'Réservation refusée',
             message: `Votre réservation pour la salle "${reservation.salle?.nom || 'N/A'}" le ${reservation.date} a été refusée. Motif: ${rejection_reason}`,
             reservation_id: reservation.id,
-            lu: false
+            lien: '/reservations',
+            lue: false
           });
-          console.log(`✅ Notification créée pour user ${reservation.user_id}:`, notif.id);
-        } catch (notifError) {
-          console.error("⚠️ Erreur création notification BDD:", notifError);
+
+          // Envoyer email de refus
+          try {
+            await emailService.sendReservationRejected(reservation.utilisateur, reservation, rejection_reason);
+            console.log(`📧 Email de refus envoyé à ${reservation.utilisateur.email}`);
+          } catch (emailError) {
+            console.error("⚠️ Erreur envoi email de refus:", emailError.message);
+          }
         }
 
         // Créer historique
         try {
           await History.create({
-            user_id: req.user.id, // Celui qui a fait l'action (admin/responsable)
+            user_id: req.user.id,
             type: 'REFUS',
             action: 'Refus de réservation',
-            description: `La réservation a été refusée par ${req.user.nom || 'un administrateur'}. Motif: ${rejection_reason}`,
+            description: `La réservation a été refusée par ${req.user.nom || 'un administrateur'}. Motif: ${rejection_reason}${proposed_alternative ? ' (Alternative proposée)' : ''}`,
             reservation_id: reservation.id,
-            details: { ancien_statut: 'en_attente', nouveau_statut: 'rejetee', motif_refus: rejection_reason }
+            details: { ancien_statut: 'en_attente', nouveau_statut: 'rejetee', motif_refus: rejection_reason, alternative_proposee: !!proposed_alternative }
           });
         } catch (histError) {
           console.error("⚠️ Erreur création historique:", histError);
@@ -250,7 +343,8 @@ router.put( "/validate/:id",authMiddleware, verifyRole(ROLES_RESERVATION_VALIDAT
         return res.json({ 
           success: true, 
           updated: reservation,
-          message: "Réservation refusée avec succès"
+          alternative_proposed: !!proposed_alternative,
+          message: proposed_alternative ? "Réservation refusée avec proposition alternative" : "Réservation refusée avec succès"
         });
       } else {
         // Par défaut : validation
@@ -270,6 +364,15 @@ router.put( "/validate/:id",authMiddleware, verifyRole(ROLES_RESERVATION_VALIDAT
           console.log(`✅ Notification créée pour user ${reservation.user_id}:`, notif.id);
         } catch (notifError) {
           console.error("⚠️ Erreur création notification BDD:", notifError);
+        }
+
+        // Envoyer email de validation
+        try {
+          await emailService.sendReservationValidated(reservation.utilisateur, reservation);
+          console.log(`📧 Email de validation envoyé à ${reservation.utilisateur.email}`);
+        } catch (emailError) {
+          console.error("⚠️ Erreur envoi email de validation:", emailError.message);
+          // Ne pas bloquer la validation si l'email échoue
         }
 
         // Créer historique
@@ -590,7 +693,8 @@ router.get("/all", authMiddleware, verifyRole(ROLES_RESERVATION_VIEW), async (re
       where: Object.keys(filtre).length > 0 ? filtre : undefined,
       include: [
         { model: Room, as: "salle", attributes: ["id", "nom"] },
-        { model: User, as: "utilisateur", attributes: ["id", "nom", "prenom", "email", "role"] }
+        { model: User, as: "utilisateur", attributes: ["id", "nom", "prenom", "email", "role"] },
+        { model: Department, as: 'department', attributes: ['id', 'name'] }
       ],
       order: [["date_debut", "ASC"]]
     });
@@ -620,6 +724,8 @@ router.get("/all", authMiddleware, verifyRole(ROLES_RESERVATION_VIEW), async (re
         icone_role,
         salle: r.salle,
         utilisateur: r.utilisateur
+        ,
+        department: r.department ? ({ id: r.department.id, name: r.department.name }) : null
       };
     });
 
@@ -776,7 +882,16 @@ router.post("/create", authMiddleware, verifyMinimumRole("user"), async (req, re
     // Notifier les admins
     try {
       const admins = await User.findAll({ where: { role: 'admin' } });
+      const createdReservationWithDetails = await Reservation.findByPk(nouvelleReservation.id, {
+        include: [
+          { model: Room, as: 'salle', attributes: ['id', 'nom'] },
+          { model: User, as: 'utilisateur', attributes: ['id', 'nom', 'prenom', 'email'] },
+          { model: require('../models').Department, as: 'department', attributes: ['id', 'name'] }
+        ]
+      });
+
       for (const admin of admins) {
+        // Notification en BDD
         await Notification.create({
           user_id: admin.id,
           type: 'new_reservation',
@@ -785,25 +900,102 @@ router.post("/create", authMiddleware, verifyMinimumRole("user"), async (req, re
           reservation_id: nouvelleReservation.id,
           lu: false
         });
+
+        // Envoyer email
+        try {
+          await emailService.sendNewReservationToAdmins(admin.email, {
+            userName: `${createdReservationWithDetails.utilisateur.prenom} ${createdReservationWithDetails.utilisateur.nom}`,
+            userEmail: createdReservationWithDetails.utilisateur.email,
+            roomName: createdReservationWithDetails.salle?.nom || `Salle #${room_id}`,
+            date: new Date(createdReservationWithDetails.date_debut).toLocaleDateString('fr-FR', { 
+              weekday: 'long', 
+              year: 'numeric', 
+              month: 'long', 
+              day: 'numeric' 
+            }),
+            startTime: new Date(createdReservationWithDetails.date_debut).toLocaleTimeString('fr-FR', { 
+              hour: '2-digit', 
+              minute: '2-digit' 
+            }),
+            endTime: new Date(createdReservationWithDetails.date_fin).toLocaleTimeString('fr-FR', { 
+              hour: '2-digit', 
+              minute: '2-digit' 
+            }),
+            motif: createdReservationWithDetails.motif || 'Non spécifié',
+            department: createdReservationWithDetails.department?.name || null
+          });
+          console.log(`📧 Email de nouvelle réservation envoyé à ${admin.email}`);
+        } catch (emailError) {
+          console.error(`⚠️ Erreur envoi email à admin ${admin.email}:`, emailError.message);
+        }
       }
     } catch (notifError) {
       console.error("⚠️ Erreur création notification admin:", notifError);
     }
 
-    // Créer historique
+    // Notifier le responsable de la salle (s'il existe)
     try {
-      await History.create({
-        user_id: req.user.id,
-        type: 'CREATION',
-        action: 'Demande de réservation',
-        description: `Nouvelle demande de réservation créée pour le ${date}.`,
-        reservation_id: nouvelleReservation.id,
-        details: { room_id, date, heure_debut, heure_fin }
+      const salle = await Room.findByPk(room_id, {
+        include: [{ model: User, as: 'responsable', attributes: ['id', 'nom', 'prenom', 'email', 'role'] }]
       });
-    } catch (histError) {
-      console.error("⚠️ Erreur création historique create:", histError);
-    }
+      console.log('🔎 Debug salle (plain):', salle ? salle.get({ plain: true }) : null);
 
+      if (salle && salle.responsable && salle.responsable.id) {
+        const resp = salle.responsable;
+        // Créer notification en base pour le responsable
+        const created = await Notification.create({
+          user_id: resp.id,
+          type: 'new_reservation',
+          titre: 'Nouvelle demande de réservation (salle sous votre responsabilité)',
+          message: `Nouvelle demande de réservation pour la salle "${salle.nom || 'ID:'+room_id}" le ${date}.`,
+          reservation_id: nouvelleReservation.id,
+          lu: false
+        });
+        console.log(`✅ Notification créée pour responsable (user ${resp.id}):`, created.id);
+
+        // Optionnel: log et/ou appel utilitaire de push
+        try {
+          await sendNotification({
+            to: resp.email || `user:${resp.id}`,
+            subject: 'Nouvelle demande de réservation',
+            message: `La salle ${salle.nom || 'ID:'+room_id} a une nouvelle demande pour le ${date}.`,
+            meta: { reservationId: nouvelleReservation.id, roomId: room_id }
+          });
+        } catch (pushErr) {
+          console.warn('⚠️ Erreur sendNotification pour responsable:', pushErr.message || pushErr);
+        }
+      } else {
+        console.log(`ℹ️ Salle ${room_id} sans responsable attribué (responsable_id=${salle ? salle.responsable_id : 'N/A'})`);
+      }
+    } catch (errResp) {
+      console.error('⚠️ Erreur notification responsable salle:', errResp);
+    }
+    // Si pas de responsable spécifique, notifier tous les responsables (roles `responsable` ou `responsable_salle`)
+    try {
+      const salleCheck = await Room.findByPk(room_id);
+      const hasResponsable = salleCheck && salleCheck.responsable_id;
+      if (!hasResponsable) {
+        const responsablesGlobal = await User.findAll({ where: { role: { [Op.in]: ['responsable', 'responsable_salle'] } } });
+        console.log(`ℹ️ Pas de responsable attribué pour la salle ${room_id} — notifications globales vers ${responsablesGlobal.length} responsable(s)`);
+        for (const r of responsablesGlobal) {
+          try {
+            const created = await Notification.create({
+              user_id: r.id,
+              type: 'new_reservation',
+              titre: 'Nouvelle demande de réservation',
+              message: `Nouvelle demande de réservation pour la salle (ID: ${room_id}) le ${date}.`,
+              reservation_id: nouvelleReservation.id,
+              lu: false
+            });
+            console.log(`✅ Notification créée pour responsable global (user ${r.id}):`, created.id);
+          } catch (e) {
+            console.warn('⚠️ Erreur création notification pour responsable global:', e.message || e);
+          }
+        }
+      }
+    } catch (e) {
+      console.error('⚠️ Erreur notification responsables globaux:', e);
+    }
     console.log("✅ Réservation créée:", nouvelleReservation.id);
     return res.status(201).json({
       message: "RÃ©servation crÃ©Ã©e",
@@ -1596,6 +1788,95 @@ router.post("/create-multiple", authMiddleware, async (req, res) => {
     await t.rollback();
     console.error("Erreur create-multiple:", error);
     res.status(400).json({ error: error.message || "Erreur lors de la création des réservations multiples" });
+  }
+});
+
+/**
+ * @swagger
+ * /api/reservations/cancel/{id}:
+ *   put:
+ *     summary: Annule une réservation (par le créateur ou admin)
+ *     tags: [Reservations]
+ *     security:
+ *       - bearerAuth: []
+ *     x-rbac:
+ *       roles: ["admin", "utilisateur"]
+ *       action: "CANCEL_RESERVATION"
+ *       resource: "reservation"
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: ID de la réservation à annuler
+ *     responses:
+ *       200:
+ *         description: Réservation annulée
+ *       401:
+ *         description: Authentification requise
+ *       403:
+ *         description: Permissions insuffisantes
+ *       404:
+ *         description: Réservation introuvable
+ */
+router.put('/cancel/:id', authMiddleware, verifyMinimumRole('user'), async (req, res) => {
+  const { id } = req.params;
+  try {
+    const reservation = await Reservation.findByPk(id, {
+      include: [
+        { model: User, as: 'utilisateur', attributes: ['id', 'nom', 'prenom', 'email'] },
+        { model: Room, as: 'salle', attributes: ['id', 'nom'] }
+      ]
+    });
+
+    if (!reservation) return res.status(404).json({ error: 'Réservation introuvable' });
+
+    // Autoriser uniquement le créateur ou un admin
+    if (reservation.user_id !== req.user.id && req.user.role !== 'admin') {
+      return res.status(403).json({ error: "Vous n'êtes pas autorisé à annuler cette réservation" });
+    }
+
+    if (reservation.statut === 'annulee') {
+      return res.status(400).json({ error: 'Réservation déjà annulée' });
+    }
+
+    const ancienStatut = reservation.statut;
+    reservation.statut = 'annulee';
+    await reservation.save();
+
+    // Notification à l'utilisateur (si autre que l'initiateur)
+    try {
+      await Notification.create({
+        user_id: reservation.user_id,
+        type: 'reservation_cancelled',
+        titre: 'Réservation annulée',
+        message: `Votre réservation pour la salle "${reservation.salle?.nom || 'N/A'}" le ${reservation.date || ''} a été annulée.`,
+        reservation_id: reservation.id,
+        lu: false
+      });
+    } catch (e) {
+      console.error('Erreur création notification annulation:', e);
+    }
+
+    // Historique
+    try {
+      await History.create({
+        user_id: req.user.id,
+        type: 'ANNULATION',
+        action: 'Annulation de réservation',
+        description: `Réservation ${reservation.id} annulée par ${req.user.email || req.user.id}`,
+        reservation_id: reservation.id,
+        details: { ancien_statut: ancienStatut, nouveau_statut: 'annulee' }
+      });
+    } catch (e) {
+      console.error('Erreur création historique annulation:', e);
+    }
+
+    return res.json({ success: true, updated: reservation });
+  } catch (error) {
+    console.error('Erreur PUT /reservations/cancel/:id :', error);
+    return res.status(500).json({ error: 'Erreur serveur' });
   }
 });
 

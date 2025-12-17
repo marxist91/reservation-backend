@@ -5,10 +5,8 @@ dotenv.config();
 // Configuration de la base de données selon l'environnement
 const config = {
   development: {
-    // Commented defaults containing literal credentials
-    // username: process.env.DB_USERNAME || 'marcel_admin',
-    username: process.env.DB_USERNAME || '',
-    // password: process.env.DB_PASSWORD || 'Reservation2025!',
+    // Defaults: use root with empty password if env vars are not set
+    username: process.env.DB_USERNAME || 'root',
     password: process.env.DB_PASSWORD || '',
     database: process.env.DB_NAME || 'reservation_salles',
     host: process.env.DB_HOST || 'localhost',
@@ -29,10 +27,8 @@ const config = {
   },
   
   test: {
-    // Commented test DB defaults with literal credentials
-    // username: process.env.DB_TEST_USERNAME || 'marcel_admin',
-    username: process.env.DB_TEST_USERNAME || '',
-    // password: process.env.DB_TEST_PASSWORD || 'Reservation2025!',
+    // Defaults for tests
+    username: process.env.DB_TEST_USERNAME || 'root',
     password: process.env.DB_TEST_PASSWORD || '',
     database: process.env.DB_TEST_NAME || 'reservation_salles_test',
     host: process.env.DB_TEST_HOST || 'localhost',
@@ -48,8 +44,9 @@ const config = {
   },
   
   production: {
-    username: process.env.DB_USERNAME,
-    password: process.env.DB_PASSWORD,
+    // In production the env vars should be set, but default to root/empty if not provided
+    username: process.env.DB_USERNAME || 'root',
+    password: process.env.DB_PASSWORD || '',
     database: process.env.DB_NAME,
     host: process.env.DB_HOST,
     port: process.env.DB_PORT || 3306,

@@ -10,6 +10,14 @@ module.exports = (sequelize, DataTypes) => {
           as: 'reservations'
         });
       }
+      // Lier le département à un responsable (User)
+      if (models.User) {
+        Department.belongsTo(models.User, {
+          foreignKey: 'responsable_id',
+          as: 'responsable',
+          constraints: false
+        });
+      }
     }
   }
 

@@ -2,7 +2,7 @@
 
 **Date:** 2 décembre 2025, 11:45  
 **Base de données:** reservation_salles  
-**Utilisateur MySQL:** marcel_admin  
+<!-- MySQL user details removed -->
 **Environnement:** XAMPP (Windows)
 
 ---
@@ -55,13 +55,13 @@
 - Minimum: **6 personnes** (Bureau Partagé 1)
 - Maximum: **150 personnes** (Auditorium)
 
-### Prix
+<!-- ### Prix -->
 - Minimum: **10€/h** (Espace Détente)
 - Maximum: **150€/h** (Auditorium)
 
 ### Détails complets
 
-| ID | Nom | Capacité | Bâtiment | Étage | Prix/h | Statut |
+<!-- | ID | Nom | Capacité | Bâtiment | Étage | Prix/h | Statut | -->
 |----|-----|----------|----------|-------|--------|--------|
 | 1 | Salle de Conférence A | 50 | Bâtiment Principal | 2ème étage | 75.00€ | disponible |
 | 2 | Salle de Réunion B | 20 | Bâtiment Principal | 1er étage | 35.00€ | disponible |
@@ -212,7 +212,7 @@ Tous les champs JSON (`equipements`, `equipements_supplementaires`) sont correct
 
 **URL:** http://localhost/phpmyadmin  
 **Base:** reservation_salles  
-**User:** marcel_admin  
+<!-- User details removed -->
 **Password:** Reservation2025!
 
 ### Navigation recommandée

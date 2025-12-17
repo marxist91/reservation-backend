@@ -14,6 +14,7 @@
     "test:watch": "jest --watch",
     "generate:artefacts": "node scripts/generate-artefacts.js",
     "dashboard": "node scripts/run-dashboard.js",
+    "seed:departments": "node tools/seedDepartments.js",
     "check:port": "node tools/cli/check-port-3306.js",
     "audit:compose": "node compose-cleaner.js",
     "validate:compose": "node compose-validator.js",

@@ -163,7 +163,7 @@ DELETE /api/reservations/:id   # Annuler
 
 ### Base de Données
 1. Ouvrir phpMyAdmin : http://localhost/phpmyadmin
-2. Se connecter : `marcel_admin` / `Reservation2025!`
+<!-- Credentials removed -->
 3. Vérifier base : `reservation_salles`
 4. Vérifier tables : users, rooms, reservations, audit_logs
 

@@ -49,7 +49,7 @@
 ```json
 {
   "development": {
-    "username": "marcel_admin",
+    <!-- "username": "marcel_admin", -->
     "password": "Reservation2025!",
     "database": "reservation_salles",
     "host": "127.0.0.1",

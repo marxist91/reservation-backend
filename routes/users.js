@@ -17,7 +17,7 @@ const safeResponse = require("../utils/safeResponse");
 
 
 
-router.get("/registry", authMiddleware, verifyRole(["admin", "responsable_salle"]), async (req, res) => {
+router.get("/registry", authMiddleware, verifyRole(["admin"]), async (req, res) => {
   const { role, email, nom, limit, offset } = req.query;
 
   const filtre = {};
@@ -35,18 +35,31 @@ router.get("/registry", authMiddleware, verifyRole(["admin", "responsable_salle"
 
     const utilisateurs = await User.findAll({
       where: filtre,
-      attributes: ["id", "nom", "email", "role"],
+      attributes: ["id", "nom", "prenom", "email", "role", "telephone", "actif", "createdAt", "updatedAt"],
       order: [["nom", "ASC"]],
       limit: pagination.limit,
       offset: pagination.offset
     });
+
+    // Mapper les noms de champs Sequelize vers le format attendu par le frontend
+    const formattedUsers = utilisateurs.map(user => ({
+      id: user.id,
+      nom: user.nom,
+      prenom: user.prenom,
+      email: user.email,
+      role: user.role,
+      telephone: user.telephone,
+      actif: user.actif,
+      created_at: user.createdAt,
+      updated_at: user.updatedAt
+    }));
 
     return safeResponse(res, {
       total,
       count: utilisateurs.length,
       offset: pagination.offset,
       limit: pagination.limit,
-      utilisateurs
+      utilisateurs: formattedUsers
     }, 200, {
       endpoint: "/api/users/list",
       user: req.user?.email,

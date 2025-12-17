@@ -23,8 +23,32 @@ const PORT = process.env.PORT || 3000;
 // 🔧 MIDDLEWARES DE BASE
 // ========================================
 app.use(helmet()); // Sécurité
+
+// Configuration CORS dynamique pour dev/production
+const allowedOrigins = process.env.CORS_ORIGINS 
+  ? process.env.CORS_ORIGINS.split(',').map(origin => origin.trim())
+  : ['http://localhost:3000', 'http://localhost:5173'];
+
+// Ajouter les URLs frontend si définies
+if (process.env.FRONTEND_URL) {
+  allowedOrigins.push(process.env.FRONTEND_URL);
+}
+if (process.env.APP_URL && !allowedOrigins.includes(process.env.APP_URL)) {
+  allowedOrigins.push(process.env.APP_URL);
+}
+
 app.use(cors({
-  origin: ['http://localhost:3000', 'http://localhost:5173'],
+  origin: function(origin, callback) {
+    // Autoriser les requêtes sans origin (mobile apps, Postman, etc.)
+    if (!origin) return callback(null, true);
+    
+    if (allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      console.warn(`🚫 CORS blocked origin: ${origin}`);
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
@@ -141,6 +165,37 @@ try {
   // Ne pas exit: la suite du serveur peut quand même fonctionner sans cette route
 }
 
+// Routes statistiques
+try {
+  console.log("📈 Chargement routes stats...");
+  const statsRoutes = require('./routes/stats');
+  app.use('/api/stats', statsRoutes);
+  console.log("✅ Stats monté sur /api/stats");
+} catch (error) {
+  console.warn("⚠️ Route stats non trouvée ou erreur au chargement:", error.message);
+}
+
+// Routes paramètres
+try {
+  console.log("⚙️ Chargement routes settings...");
+  const settingsRoutes = require('./routes/settings');
+  app.use('/api/settings', settingsRoutes);
+  console.log("✅ Settings monté sur /api/settings");
+} catch (error) {
+  console.warn("⚠️ Route settings non trouvée ou erreur au chargement:", error.message);
+}
+
+// Routes alternatives (propositions de salles alternatives)
+try {
+  console.log("🔄 Chargement routes alternatives...");
+  const alternativesRoutes = require('./routes/alternatives');
+  app.use('/api/alternatives', alternativesRoutes);
+  console.log("✅ Alternatives monté sur /api/alternatives");
+} catch (error) {
+  console.error("❌ ERREUR DÉTAILLÉE alternatives:", error);
+  console.warn("⚠️ Route alternatives non trouvée ou erreur au chargement:", error.message);
+}
+
 console.log("🎉 Toutes les routes chargées");
 
 // ========================================
@@ -186,6 +241,13 @@ if (process.env.NODE_ENV !== 'test') {
   sequelize.sync({ alter: false }) // Mettre à true si vous voulez que Sequelize mette à jour les tables existantes (attention en prod)
     .then(() => {
       console.log("✅ Base de données synchronisée");
+      
+      // Initialiser le service email avec le modèle User
+      console.log("📧 Initialisation du service email...");
+      const emailService = require('./services/emailService');
+      const { User } = require('./models');
+      emailService.setUserModel(User);
+      console.log("✅ Service email configuré avec le modèle User");
       
       // Démarrer le scheduler d'annulation automatique
       console.log("🕐 Démarrage du scheduler d'annulation automatique...");

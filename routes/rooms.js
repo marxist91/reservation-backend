@@ -9,7 +9,141 @@ const verifyRole = require("../middlewares/verifyRole");
 const { ROLES_ROOM_VIEW, RESERVATION_STATUTS, ROLES_ROOM_UPDATE } = require("../constants/permissions");
 const { Op } = require("sequelize");
 const safeResponse = require("../utils/safeResponse");
-;
+
+// 📋 Route publique - Liste de toutes les salles (pour page d'accueil)
+router.get("/public", async (req, res) => {
+  try {
+    const rooms = await Room.findAll({
+      where: {
+        statut: 'disponible' // Afficher uniquement les salles disponibles
+      },
+      attributes: ['id', 'nom', 'description', 'capacite', 'equipements', 'batiment', 'etage', 'superficie', 'statut', 'image_url'],
+      order: [["nom", "ASC"]]
+    });
+
+    return res.json(rooms);
+  } catch (error) {
+    console.error("Erreur récupération salles publiques:", error);
+    return res.status(500).json({
+      error: "Erreur serveur",
+      message: error.message
+    });
+  }
+});
+
+// 🕐 GET /rooms/availability - Retourne la disponibilité des salles pour une date/heure donnée
+router.get("/availability", authMiddleware, verifyRole(ROLES_ROOM_VIEW), async (req, res) => {
+  try {
+    const { date, time, duration } = req.query;
+    
+    // Validation
+    if (!date) {
+      return res.status(400).json({ error: "Le paramètre 'date' (YYYY-MM-DD) est requis" });
+    }
+    
+    // Parsing de l'heure et durée
+    const checkTime = time || '00:00';
+    const durationMinutes = parseInt(duration) || 60; // Durée par défaut: 60 min
+    
+    // Construire les timestamps pour le créneau demandé
+    const checkStart = new Date(`${date}T${checkTime}:00`);
+    const checkEnd = new Date(checkStart.getTime() + durationMinutes * 60000);
+    
+    console.log(`📅 Vérification disponibilité: ${date} ${checkTime} (${durationMinutes}min)`);
+    console.log(`⏰ Créneau demandé: ${checkStart.toISOString()} → ${checkEnd.toISOString()}`);
+    
+    // Récupérer toutes les réservations validées/confirmées qui chevauchent ce créneau
+    // Chevauchement si: (date_debut < checkEnd) ET (date_fin > checkStart)
+    const reservations = await Reservation.findAll({
+      where: {
+        date_debut: { [Op.lt]: checkEnd },
+        date_fin: { [Op.gt]: checkStart },
+        statut: { [Op.in]: ['validee', 'confirmee'] }
+      },
+      attributes: ['id', 'room_id', 'date_debut', 'date_fin', 'statut'],
+      raw: true
+    });
+    
+    console.log(`🔍 ${reservations.length} réservation(s) trouvée(s)`);
+    reservations.forEach(r => {
+      console.log(`  - Résa #${r.id} Salle ${r.room_id}: ${r.date_debut} → ${r.date_fin} (${r.statut})`);
+    });
+    
+    // Calculer la map d'occupation
+    const occupiedRooms = {};
+    const partiallyOccupied = {};
+    
+    reservations.forEach(r => {
+      const roomId = r.room_id;
+      if (!roomId) return;
+      
+      const resStart = new Date(r.date_debut);
+      const resEnd = new Date(r.date_fin);
+      
+      // Vérifier le type de chevauchement
+      const fullyCovers = (checkStart >= resStart && checkEnd <= resEnd);
+      const overlaps = (checkStart < resEnd && checkEnd > resStart);
+      
+      if (overlaps) {
+        if (fullyCovers) {
+          console.log(`  ❌ Salle ${roomId}: COMPLÈTEMENT OCCUPÉE`);
+          occupiedRooms[roomId] = true;
+        } else {
+          if (!occupiedRooms[roomId]) {
+            console.log(`  ⚠️ Salle ${roomId}: PARTIELLEMENT OCCUPÉE`);
+            partiallyOccupied[roomId] = true;
+          }
+        }
+      }
+    });
+    
+    // Récupérer toutes les salles
+    const rooms = await Room.findAll({
+      attributes: ['id', 'nom', 'capacite'],
+      raw: true
+    });
+    
+    // Construire la réponse
+    const availability = rooms.map(room => ({
+      id: room.id,
+      nom: room.nom,
+      capacite: room.capacite,
+      available: !occupiedRooms[room.id] && !partiallyOccupied[room.id],
+      occupied: !!occupiedRooms[room.id],
+      partiallyOccupied: !!partiallyOccupied[room.id]
+    }));
+    
+    const endHours = checkEnd.getHours().toString().padStart(2, '0');
+    const endMinutes = checkEnd.getMinutes().toString().padStart(2, '0');
+    
+    console.log(`✅ Résumé: ${availability.filter(r => r.available).length} dispo, ${availability.filter(r => r.occupied).length} occupée(s)`);
+    
+    return res.json({
+      date,
+      time: checkTime,
+      duration: durationMinutes,
+      timeRange: { 
+        start: checkTime, 
+        end: `${endHours}:${endMinutes}` 
+      },
+      rooms: availability,
+      summary: {
+        total: rooms.length,
+        available: availability.filter(r => r.available).length,
+        occupied: availability.filter(r => r.occupied).length,
+        partiallyOccupied: availability.filter(r => r.partiallyOccupied).length
+      }
+    });
+    
+  } catch (error) {
+    console.error("Erreur calcul disponibilité salles:", error);
+    return res.status(500).json({
+      error: "Erreur serveur",
+      message: error.message
+    });
+  }
+});
+
 router.get("/ping", (req, res) => {
   return res.send("✅ Route rooms opérationnelle !");
 });
@@ -36,16 +170,16 @@ router.get("/", authMiddleware, verifyRole(ROLES_ROOM_VIEW), async (req, res) =>
   }
 });
 
-// ➕ Créer une nouvelle salle (admin/responsable uniquement)
-router.post("/", authMiddleware, verifyRole(["admin", "responsable"]), async (req, res) => {
+// ➕ Créer une nouvelle salle (admin uniquement)
+router.post("/", authMiddleware, verifyRole(["admin"]), async (req, res) => {
   try {
-    const { nom, description, capacite, equipements, batiment, etage, superficie, prix_heure, responsable_id, statut, image_url } = req.body;
+    const { nom, description, capacite, equipements, batiment, etage, superficie, responsable_id, statut, image_url } = req.body;
 
     // Validation minimale
-    if (!nom || !capacite || !prix_heure) {
+    if (!nom || !capacite) {
       return res.status(400).json({
         error: "Champs requis manquants",
-        required: ["nom", "capacite", "prix_heure"]
+        required: ["nom", "capacite"]
       });
     }
 
@@ -57,7 +191,6 @@ router.post("/", authMiddleware, verifyRole(["admin", "responsable"]), async (re
       batiment,
       etage,
       superficie,
-      prix_heure,
       responsable_id: responsable_id || req.user.id,
       statut: statut || 'disponible',
       image_url
@@ -319,7 +452,7 @@ router.get("/dashboard", authMiddleware, verifyRole(ROLES_ROOM_VIEW), async (req
   }
 });
 
-router.put( "/update/:roomId", authMiddleware, verifyRole(["admin", "responsable"]), // admin ou responsable
+router.put( "/update/:roomId", authMiddleware, verifyRole(["admin"]), // admin uniquement
   async (req, res) => {
     try {
       const { roomId } = req.params;

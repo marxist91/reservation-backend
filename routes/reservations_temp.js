@@ -2,7 +2,7 @@ const express = require("express");
 const router = express.Router();
 const fs = require("fs");
 
-const { Reservation, User, Room } = require("../models");
+const { Reservation, User, Room, Department, Notification, History } = require("../models");
 const { Op } = require("sequelize");
 const authMiddleware = require("../middlewares/authMiddleware");
 const verifyRole = require("../middlewares/verifyRole");
@@ -38,6 +38,11 @@ router.get("/", authMiddleware, verifyRole(ROLES_RESERVATION_VIEW), async (req, 
           model: User,
           as: "validateur",
           attributes: ["id", "nom", "prenom"]
+        },
+        {
+          model: Department,
+          as: 'department',
+          attributes: ['id', 'name']
         }
       ],
       order: [["date_debut", "DESC"]]
@@ -56,7 +61,7 @@ router.get("/", authMiddleware, verifyRole(ROLES_RESERVATION_VIEW), async (req, 
 // ➕ Créer une nouvelle réservation
 router.post("/", authMiddleware, async (req, res) => {
   try {
-    const { room_id, date_debut, date_fin, motif, nombre_participants, equipements_supplementaires } = req.body;
+    const { room_id, date_debut, date_fin, motif, nombre_participants, equipements_supplementaires, department_id, departement } = req.body;
     const user_id = req.user.id;
 
     // Validation
@@ -102,6 +107,17 @@ router.post("/", authMiddleware, async (req, res) => {
       });
     }
 
+    // Déterminer department_id si fourni en string (departement) -> rechercher ou créer
+    let depIdToSet = department_id ?? null;
+    if (!depIdToSet && departement) {
+      try {
+        const [dep, created] = await Department.findOrCreate({ where: { name: departement }, defaults: { name: departement } });
+        depIdToSet = dep.id;
+      } catch (e) {
+        console.warn('Impossible de trouver/créer le département', e);
+      }
+    }
+
     // Créer réservation
     const nouvelleReservation = await Reservation.create({
       user_id,
@@ -111,7 +127,8 @@ router.post("/", authMiddleware, async (req, res) => {
       motif,
       nombre_participants,
       equipements_supplementaires,
-      statut: 'en_attente'
+      statut: 'en_attente',
+      department_id: depIdToSet
     });
 
     return res.status(201).json(nouvelleReservation);

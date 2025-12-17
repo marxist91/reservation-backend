@@ -84,7 +84,7 @@ Content-Type: application/json
 - ID créé: 13
 - Nom: Salle de Test QA
 - Capacité: 25 personnes
-- Prix: 40€/h
+- <!-- Prix: 40€/h -->
 - Statut: disponible
 
 **Validations testées:**
@@ -118,7 +118,7 @@ Content-Type: application/json
 - Salle: 13
 - Date: 2025-12-10 09:00 → 11:00
 - Statut: en_attente (par défaut)
-- Prix total: 80€ (calculé automatiquement: 2h × 40€/h)
+- <!-- Prix total: 80€ (calculé automatiquement: 2h × 40€/h) -->
 
 **Validations testées:**
 - ✅ Vérification date_fin > date_debut
@@ -260,7 +260,7 @@ Content-Type: application/json
 **Résultat:** ✅ **SUCCÈS**
 - ID: 13
 - Capacité MAJ: 25 → 30 personnes
-- Prix MAJ: 40€/h → 45€/h
+- <!-- Prix MAJ: 40€/h → 45€/h -->
 
 **Validations testées:**
 - ✅ ROLES_ROOM_UPDATE remplacé par tableau ["admin", "responsable"]
@@ -398,7 +398,7 @@ router.post("/", authMiddleware, async (req, res) => {
 
 **Fonctionnalités:**
 - Détection chevauchements de réservations
-- Calcul prix automatique: durée × prix_heure
+- <!-- Calcul prix automatique: durée × prix_heure -->
 - Support champs JSON (equipements_supplementaires)
 
 ---
@@ -468,7 +468,7 @@ if (statut) salle.statut = statut; // NOUVEAU
 - ✅ Validations Joi sur les entrées
 - ✅ Contraintes de clés étrangères respectées
 - ✅ Détection des chevauchements de réservations
-- ✅ Calcul automatique des prix
+- <!-- ✅ Calcul automatique des prix -->
 - ✅ Champs JSON correctement sauvegardés/récupérés
 
 ### Audit

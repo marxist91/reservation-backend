@@ -14,6 +14,16 @@ module.exports = function verifyRole(rolesAutorisés) {
     // 🧼 Normalise la casse
     roleUtilisateur = roleUtilisateur.toLowerCase();
 
+      // Support legacy/variants of role names (ex: 'responsable_salle')
+      const aliasMap = {
+        'responsable_salle': 'responsable',
+        'utilisateur': 'user',
+      };
+
+      if (aliasMap[roleUtilisateur]) {
+        roleUtilisateur = aliasMap[roleUtilisateur];
+      }
+
     // ✅ Transforme rôle autorisé en tableau si nécessaire
     if (typeof rolesAutorisés === "string") {
       rolesAutorisés = [rolesAutorisés];

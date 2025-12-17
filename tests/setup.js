@@ -15,9 +15,8 @@ const setupTestDatabase = async () => {
   // Utiliser une base de données de test séparée
   const sequelize = new Sequelize(
     process.env.TEST_DB_NAME || 'reservation_test_db', // Base différente pour les tests
-    // process.env.TEST_DB_USER || 'marcel_admin',
-    process.env.TEST_DB_USER || '',
-    // process.env.TEST_DB_PASSWORD || 'Reservation2025!',
+    // Default to root without password if env not set
+    process.env.TEST_DB_USER || 'root',
     process.env.TEST_DB_PASSWORD || '',
     {
       host: process.env.TEST_DB_HOST || 'localhost',

@@ -12,8 +12,8 @@ router.get("/", authMiddleware, async (req, res) => {
     
     let history;
     
-    // Si admin ou responsable, voir tout
-    if (userRole === 'admin' || userRole === 'responsable_salle') {
+    // Si admin ou responsable (y compris variantes), voir tout
+    if (userRole === 'admin' || userRole === 'responsable' || userRole === 'responsable_salle') {
       history = await History.findAll({
         order: [["created_at", "DESC"]],
         include: [

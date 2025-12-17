@@ -1,12 +1,16 @@
 const express = require('express');
 const router = express.Router();
 const authMiddleware = require('../middlewares/authMiddleware');
-const { Department, Reservation } = require('../models');
+const verifyRole = require('../middlewares/verifyRole');
+const { Department, Reservation, User } = require('../models');
 
 // GET /api/departments - lister tous les départements
 router.get('/', authMiddleware, async (req, res) => {
   try {
-    const deps = await Department.findAll({ order: [['name', 'ASC']] });
+    const deps = await Department.findAll({
+      order: [['name', 'ASC']],
+      include: [{ model: User, as: 'responsable', attributes: ['id', 'prenom', 'nom', 'email'] }]
+    });
     console.log(`GET /api/departments -> found ${deps.length} departments`);
     if (deps.length > 0) {
       console.log('Sample departments:', deps.slice(0, 5).map(d => ({ id: d.id, name: d.name })));
@@ -19,7 +23,7 @@ router.get('/', authMiddleware, async (req, res) => {
 });
 
 // POST /api/departments - créer un département
-router.post('/', authMiddleware, async (req, res) => {
+router.post('/', authMiddleware, verifyRole(["admin"]), async (req, res) => {
   try {
     const { name, description, slug, responsable_id } = req.body;
     if (!name || !name.trim()) {
@@ -41,7 +45,9 @@ router.post('/', authMiddleware, async (req, res) => {
         await dep.update({ description: description ?? dep.description, slug: slug ?? dep.slug, responsable_id: responsable_id ?? dep.responsable_id });
       }
     }
-    return res.status(created ? 201 : 200).json({ data: dep, created });
+    // Re-fetch with responsable included
+    const result = await Department.findByPk(dep.id, { include: [{ model: User, as: 'responsable', attributes: ['id', 'prenom', 'nom', 'email'] }] });
+    return res.status(created ? 201 : 200).json({ data: result, created });
   } catch (error) {
     console.error('Erreur POST /api/departments:', error);
     return res.status(500).json({ error: 'Erreur serveur' });
@@ -49,7 +55,7 @@ router.post('/', authMiddleware, async (req, res) => {
 });
 
 // PUT /api/departments/:id - mettre à jour un département
-router.put('/:id', authMiddleware, async (req, res) => {
+router.put('/:id', authMiddleware, verifyRole(["admin"]), async (req, res) => {
   try {
     const id = parseInt(req.params.id, 10);
     const { name, description, slug, responsable_id } = req.body;
@@ -65,8 +71,9 @@ router.put('/:id', authMiddleware, async (req, res) => {
     if (existing && existing.id !== id) {
       return res.status(409).json({ error: 'Un département avec ce nom existe déjà' });
     }
-    await dep.update({ name: name.trim(), description: description ?? dep.description, slug: slug ?? dep.slug, responsable_id: typeof responsable_id !== 'undefined' ? responsable_id : dep.responsable_id });
-    return res.json({ data: dep });
+    await dep.update({ name: name.trim(), description: description ?? dep.description, slug: slug ?? dep.slug, responsable_id: typeof responsable_id !== 'undefined' ? (responsable_id === '' ? null : responsable_id) : dep.responsable_id });
+    const updated = await Department.findByPk(dep.id, { include: [{ model: User, as: 'responsable', attributes: ['id', 'prenom', 'nom', 'email'] }] });
+    return res.json({ data: updated });
   } catch (error) {
     console.error('Erreur PUT /api/departments/:id:', error);
     return res.status(500).json({ error: 'Erreur serveur' });
@@ -74,7 +81,7 @@ router.put('/:id', authMiddleware, async (req, res) => {
 });
 
 // DELETE /api/departments/:id - supprimer un département (si non utilisé)
-router.delete('/:id', authMiddleware, async (req, res) => {
+router.delete('/:id', authMiddleware, verifyRole(["admin"]), async (req, res) => {
   try {
     const id = parseInt(req.params.id, 10);
     const dep = await Department.findByPk(id);

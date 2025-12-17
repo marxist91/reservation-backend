@@ -2,7 +2,7 @@
 
 // Fonction qui sera appelée après l'initialisation des modèles
 const setupAssociations = (models) => {
-  const { User, Room, Reservation, AuditLog, Department } = models;
+  const { User, Room, Reservation, AuditLog, Department, ProposedAlternative } = models;
 
   // ⚠️ IMPORTANT : Les associations principales sont déjà définies dans les modèles individuels
   // On ajoute seulement l'association AuditLog -> User qui n'est pas définie ailleurs
@@ -13,6 +13,9 @@ const setupAssociations = (models) => {
     as: 'auteur', // Alias unique pour éviter les conflits
     constraints: false // Permet les valeurs nulles pour les actions système
   });
+
+  // Note: ProposedAlternative.associate() est déjà appelé automatiquement par models/index.js
+  // Pas besoin de l'appeler ici pour éviter les associations en double
 
   // Note : Toutes les autres associations sont déjà définies dans :
   // - User.js : User.hasMany(Reservation), User.hasMany(AuditLog), User.hasMany(Room)

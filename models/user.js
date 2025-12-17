@@ -16,6 +16,13 @@ module.exports = (sequelize, DataTypes) => {
         foreignKey: "responsable_id",
         as: "salles" 
       });
+
+      // Un utilisateur peut être responsable de plusieurs départements
+      User.hasMany(models.Department, {
+        foreignKey: 'responsable_id',
+        as: 'departments',
+        constraints: false
+      });
       
       // Un utilisateur peut avoir plusieurs logs d'audit
       User.hasMany(models.AuditLog, {

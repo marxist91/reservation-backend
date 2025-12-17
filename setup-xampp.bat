@@ -59,9 +59,7 @@ echo    Execution du script SQL...
 
 cd /d C:\xampp\mysql\bin
 mysql.exe -u root -e "CREATE DATABASE IF NOT EXISTS reservation_salles CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;" 2>nul
-mysql.exe -u root -e "CREATE USER IF NOT EXISTS 'marcel_admin'@'localhost' IDENTIFIED BY 'Reservation2025!';" 2>nul
-mysql.exe -u root -e "GRANT ALL PRIVILEGES ON reservation_salles.* TO 'marcel_admin'@'localhost';" 2>nul
-mysql.exe -u root -e "FLUSH PRIVILEGES;" 2>nul
+REM User creation for 'marcel_admin' removed per cleanup
 
 if %errorlevel%==0 (
     echo    [OK] Base de donnees creee

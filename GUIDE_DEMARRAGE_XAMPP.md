@@ -24,9 +24,9 @@
 
 1. Ouvrez `http://localhost/phpmyadmin`
 2. Créez un utilisateur :
-   - **Nom** : `marcel_admin`
+   <!-- - **Nom** : `marcel_admin` -->
    - **Hôte** : `localhost`
-   - **Mot de passe** : `Reservation2025!`
+   <!-- - **Mot de passe** : `Reservation2025!` -->
    - **Privilèges** : Cocher "Accorder tous les privilèges"
 
 3. Créez la base de données :
@@ -38,13 +38,10 @@
 ```bash
 # Ouvrir MySQL dans XAMPP shell
 cd C:\xampp\mysql\bin
-mysql.exe -u root -p
+mysql.exe -u root
 
-# Créer l'utilisateur et la base
-CREATE USER 'marcel_admin'@'localhost' IDENTIFIED BY 'Reservation2025!';
+# Créer la base
 CREATE DATABASE reservation_salles CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-GRANT ALL PRIVILEGES ON reservation_salles.* TO 'marcel_admin'@'localhost';
-FLUSH PRIVILEGES;
 exit;
 ```
 
@@ -67,8 +64,8 @@ Le fichier `.env` est déjà configuré pour XAMPP :
 DB_HOST=localhost
 DB_PORT=3306
 DB_NAME=reservation_salles
-DB_USERNAME=marcel_admin
-DB_PASSWORD=Reservation2025!
+DB_USERNAME=root
+DB_PASSWORD=
 ```
 
 ---
@@ -146,7 +143,7 @@ npm run lint:fix   # Corriger automatiquement
 3. Testez la connexion MySQL :
    ```bash
    cd C:\xampp\mysql\bin
-   mysql.exe -u marcel_admin -p
+   # mysql.exe -u root
    ```
 
 ### Port 3000 déjà utilisé

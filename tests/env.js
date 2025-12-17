@@ -6,12 +6,10 @@ process.env.NODE_ENV = 'test';
 process.env.PORT = process.env.TEST_PORT || '3001';
 
 // Base de données de test - Aligné avec config/config.json
-process.env.TEST_DB_NAME = process.env.TEST_DB_NAME || 'reservation_salles';
-// Commented literal test DB credentials for cleanup
-// process.env.TEST_DB_USER = process.env.TEST_DB_USER || 'marcel_admin';
-process.env.TEST_DB_USER = process.env.TEST_DB_USER || '';
-// process.env.TEST_DB_PASSWORD = process.env.TEST_DB_PASSWORD || 'Reservation2025!';
-process.env.TEST_DB_PASSWORD = process.env.TEST_DB_PASSWORD || '';
+  // Test DB defaults (use root without password if not set)
+  process.env.TEST_DB_NAME = process.env.TEST_DB_NAME || 'reservation_salles';
+  process.env.TEST_DB_USER = process.env.TEST_DB_USER || 'root';
+  process.env.TEST_DB_PASSWORD = process.env.TEST_DB_PASSWORD || '';
 process.env.TEST_DB_HOST = process.env.TEST_DB_HOST || 'localhost';
 
 // Variables pour Sequelize config.json

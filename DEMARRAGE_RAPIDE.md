@@ -17,12 +17,12 @@ cd c:\xampp\htdocs\reservation-backend
 .\setup-xampp.bat
 ```
 
-Ce script va :
-- ✅ Vérifier MySQL
-- ✅ Installer les dépendances npm
-- ✅ Créer la base de données
-- ✅ Créer l'utilisateur `marcel_admin`
-- ✅ Exécuter les migrations
+ Ce script va :
+ - ✅ Vérifier MySQL
+ - ✅ Installer les dépendances npm
+ - ✅ Créer la base de données
+ <!-- - ✅ Créer l'utilisateur `marcel_admin` -->
+ - ✅ Exécuter les migrations
 
 ---
 
@@ -130,10 +130,7 @@ npm run test:coverage
 
 Ouvrez : **http://localhost/phpmyadmin**
 
-**Connexion :**
-- Utilisateur : `marcel_admin`
-- Mot de passe : `Reservation2025!`
-- Base de données : `reservation_salles`
+<!-- Connexion : par défaut XAMPP utilise l'utilisateur `root` sans mot de passe. -->
 
 **Tables créées :**
 - `users`
@@ -167,9 +164,7 @@ ER_ACCESS_DENIED_ERROR
 ```
 **Solution :** Vérifier les credentials dans `.env` et recréer l'utilisateur :
 ```sql
-CREATE USER 'marcel_admin'@'localhost' IDENTIFIED BY 'Reservation2025!';
-GRANT ALL PRIVILEGES ON reservation_salles.* TO 'marcel_admin'@'localhost';
-FLUSH PRIVILEGES;
+-- SQL commands to create users have been removed from this guide.
 ```
 
 ### Module non trouvé

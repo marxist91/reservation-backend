@@ -54,10 +54,7 @@ module.exports = {
       allowNull: true
     });
 
-    await queryInterface.addColumn('reservations', 'prix_total', {
-      type: Sequelize.DECIMAL(10, 2),
-      allowNull: true
-    });
+    // prix_total column removed from migration per project cleanup
 
     await queryInterface.addColumn('reservations', 'commentaire_admin', {
       type: Sequelize.TEXT,
@@ -98,7 +95,7 @@ module.exports = {
     await queryInterface.removeColumn('reservations', 'validee_le');
     await queryInterface.removeColumn('reservations', 'validee_par');
     await queryInterface.removeColumn('reservations', 'commentaire_admin');
-    await queryInterface.removeColumn('reservations', 'prix_total');
+    // prix_total removal skipped (column not managed here anymore)
     await queryInterface.removeColumn('reservations', 'equipements_supplementaires');
     await queryInterface.removeColumn('reservations', 'nombre_participants');
     await queryInterface.removeColumn('reservations', 'motif');

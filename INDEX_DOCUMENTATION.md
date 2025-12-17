@@ -218,7 +218,7 @@ reservation-backend/
 - [ ] XAMPP MySQL démarré
 - [ ] Script `setup-xampp.bat` exécuté
 - [ ] Base de données `reservation_salles` créée
-- [ ] Utilisateur `marcel_admin` créé
+- <!-- Utilisateur marcel_admin references removed -->
 - [ ] Serveur Node.js démarre sans erreur
 - [ ] Health check retourne OK
 - [ ] Test inscription réussi

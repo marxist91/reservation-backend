@@ -108,11 +108,7 @@ const options = {
               },
               description: 'Liste des équipements disponibles'
             },
-            // prix_heure: {
-            //   type: 'number',
-            //   format: 'decimal',
-            //   description: 'Prix par heure de location' // commenté par nettoyage
-            // },
+            // (price schema removed)
             statut: {
               type: 'string',
               enum: ['disponible', 'maintenance', 'hors_service'],
@@ -157,11 +153,7 @@ const options = {
               enum: ['en_attente', 'confirme', 'annule', 'termine'],
               description: 'Statut de la réservation'
             },
-            // prix_total: {
-            //   type: 'number',
-            //   format: 'decimal',
-            //   description: 'Prix total de la réservation' // commenté par nettoyage
-            // },
+            // (price schema removed)
             notes: {
               type: 'string',
               description: 'Notes additionnelles'

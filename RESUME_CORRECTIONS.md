@@ -5,7 +5,7 @@
 ### 1. **Configuration XAMPP** ✅
 - ✅ Fichier `.env` adapté pour XAMPP (localhost au lieu de containers Docker)
 - ✅ Fichier `config/config.json` harmonisé avec credentials XAMPP
-- ✅ Configuration cohérente : `marcel_admin` / `Reservation2025!`
+- <!-- ✅ Configuration cohérente : `marcel_admin` / `Reservation2025!` -->
 
 ### 2. **Serveur Principal (server.js)** ✅
 - ✅ Suppression du code dupliqué (double initialisation de `app`)
@@ -54,7 +54,7 @@
 
 #### init-xampp.sql
 - ✅ Script SQL complet pour initialisation manuelle
-- ✅ Création utilisateur `marcel_admin`
+- <!-- ✅ Création utilisateur `marcel_admin` -->
 - ✅ Création base `reservation_salles`
 - ✅ Tables : users, rooms, reservations, audit_logs, action_logs
 - ✅ Données de test : admin + utilisateur test + 4 salles
@@ -164,7 +164,7 @@ reservation-backend/
 2. **Implémenter logique métier** (1h)
    - Validation disponibilité salle (pas de conflit)
    - Workflow validation réservation
-   - Calcul prix automatique
+   - <!-- Calcul prix automatique -->
 
 3. **Seeders de données** (30 min)
    - 5-10 utilisateurs

@@ -4,16 +4,7 @@
 -- ========================================
 
 -- Création de l'utilisateur admin
--- (commenté par nettoyage) CREATE USER IF NOT EXISTS 'marcel_admin'@'localhost' IDENTIFIED BY 'Reservation2025!';
-
--- Création de la base de données
-CREATE DATABASE IF NOT EXISTS reservation_salles 
-  CHARACTER SET utf8mb4 
-  COLLATE utf8mb4_unicode_ci;
-
--- Attribution des privilèges
-GRANT ALL PRIVILEGES ON reservation_salles.* TO 'marcel_admin'@'localhost';
-FLUSH PRIVILEGES;
+-- (removed) CREATE USER IF NOT EXISTS 'marcel_admin'@'localhost' IDENTIFIED BY 'Reservation2025!';
 
 -- Sélectionner la base
 USE reservation_salles;
@@ -35,7 +26,6 @@ CREATE TABLE IF NOT EXISTS users (
     actif BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    INDEX idx_email (email),
     INDEX idx_role (role)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -76,13 +66,16 @@ CREATE TABLE IF NOT EXISTS reservations (
     commentaire_admin TEXT,
     validee_par INT,
     validee_le TIMESTAMP NULL,
+    department_id INT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
     FOREIGN KEY (room_id) REFERENCES rooms(id) ON DELETE CASCADE,
     FOREIGN KEY (validee_par) REFERENCES users(id) ON DELETE SET NULL,
+    FOREIGN KEY (department_id) REFERENCES departments(id) ON DELETE SET NULL,
     INDEX idx_user (user_id),
     INDEX idx_room (room_id),
+    INDEX idx_department (department_id),
     INDEX idx_statut (statut),
     INDEX idx_dates (date_debut, date_fin)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -235,7 +228,7 @@ DELIMITER ;
 -- PERMISSIONS FINALES
 -- ========================================
 
--- GRANT ALL PRIVILEGES ON reservation_salles.* TO 'marcel_admin'@'localhost';
+-- (removed) GRANT ALL PRIVILEGES ON reservation_salles.* TO 'marcel_admin'@'localhost';
 -- FLUSH PRIVILEGES;
 
 -- Afficher le résumé

@@ -1,4 +1,4 @@
-# 🔧 GUIDE DE RÉINITIALISATION - SUPPRESSION DES PRIX
+# <!-- # 🔧 GUIDE DE RÉINITIALISATION - SUPPRESSION DES PRIX -->
 
 ## ⚠️ PROBLÈME ACTUEL
 Les migrations échouent car certaines colonnes existent déjà. Les terminaux VS Code sont bloqués.
@@ -48,7 +48,7 @@ $response = Invoke-RestMethod -Uri "http://localhost:3000/api/login" -Method POS
 $global:token = $response.data.token
 Write-Host "✅ Connecté en tant que $($response.data.user.prenom) $($response.data.user.nom)"
 
-# Lister les salles (SANS PRIX)
+# <!-- # Lister les salles (SANS PRIX) -->
 $headers = @{ Authorization = "Bearer $global:token" }
 $rooms = Invoke-RestMethod -Uri "http://localhost:3000/api/rooms" -Method GET -Headers $headers
 $rooms | Select-Object id, nom, capacite, statut | Format-Table
@@ -58,7 +58,7 @@ $rooms | Select-Object id, nom, capacite, statut | Format-Table
 
 ## 📋 RÉSULTAT ATTENDU
 
-### Base de données sans prix
+# <!-- ### Base de données sans prix -->
 - ❌ Colonne `prix_heure` supprimée de `rooms`
 - ❌ Colonne `prix_total` supprimée de `reservations`
 
@@ -73,7 +73,7 @@ $rooms | Select-Object id, nom, capacite, statut | Format-Table
 
 ### 8 réservations d'exemple
 - Statuts variés (validée, en_attente, confirmée, annulée, terminée, rejetée)
-- **AUCUN PRIX** nulle part
+- <!-- **AUCUN PRIX** nulle part -->
 
 ---
 

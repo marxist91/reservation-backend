@@ -141,10 +141,9 @@ Les tests de fumée vérifient :
 ## 🔧 Détails Techniques
 
 ### Configuration de Base de Données
-- **Base de Données de Test** : `reservation_salles`
-- **Identifiants** : `marcel_admin` / `Reservation2025!`
-- **Hôte** : `localhost`
-- **Dialecte** : `mysql`
+-- **Base de Données de Test** : `reservation_salles`
+-- **Hôte** : `localhost`
+-- **Dialecte** : `mysql`
 
 ### Variables d'Environnement
 - `NODE_ENV=test`

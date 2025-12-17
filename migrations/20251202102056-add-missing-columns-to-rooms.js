@@ -23,11 +23,7 @@ module.exports = {
       allowNull: true
     });
 
-    await queryInterface.addColumn('rooms', 'prix_heure', {
-      type: Sequelize.DECIMAL(10, 2),
-      allowNull: false,
-      defaultValue: 0
-    });
+    // prix_heure column removed from migration per project cleanup
 
     await queryInterface.addColumn('rooms', 'statut', {
       type: Sequelize.ENUM('disponible', 'maintenance', 'indisponible'),
@@ -44,7 +40,7 @@ module.exports = {
   async down(queryInterface, Sequelize) {
     await queryInterface.removeColumn('rooms', 'image_url');
     await queryInterface.removeColumn('rooms', 'statut');
-    await queryInterface.removeColumn('rooms', 'prix_heure');
+    // prix_heure removal skipped (column not managed here anymore)
     await queryInterface.removeColumn('rooms', 'superficie');
     await queryInterface.removeColumn('rooms', 'etage');
     await queryInterface.removeColumn('rooms', 'batiment');

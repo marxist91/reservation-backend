@@ -8,7 +8,8 @@ import { Sequelize } from 'sequelize';
 
 // Use environment variables instead (no literal credentials kept in code)
 const DB_NAME = process.env.DB_NAME || 'reservation_salles';
-const DB_USER = process.env.DB_USERNAME || '';
+// Default to root with empty password when not provided
+const DB_USER = process.env.DB_USERNAME || 'root';
 const DB_PASS = process.env.DB_PASSWORD || '';
 const sequelize = new Sequelize(DB_NAME, DB_USER, DB_PASS, {
   host: process.env.DB_HOST || 'localhost',
