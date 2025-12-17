@@ -29,12 +29,19 @@
     "logging": false
   },
   "production": {
-    "username": "root",
-    "password": null,
-    "database": "reservation_salles_prod",
-    "host": "localhost",
-    "port": 3309,
+    "use_env_variable": "DATABASE_URL",
     "dialect": "mysql",
-    "logging": false
+    "logging": false,
+    "pool": {
+      "max": 20,
+      "min": 5,
+      "acquire": 60000,
+      "idle": 300000
+    },
+    "define": {
+      "timestamps": true,
+      "underscored": true,
+      "freezeTableName": true
+    }
   }
 }
