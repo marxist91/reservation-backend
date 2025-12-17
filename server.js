@@ -301,8 +301,13 @@ if (process.env.NODE_ENV !== 'test') {
     })
     .catch((error) => {
       console.error("❌ Erreur de connexion MySQL:", error.message);
-      console.error("💡 Vérifiez que XAMPP MySQL est démarré");
-      console.error("💡 Vérifiez les credentials dans .env");
+      console.error("❌ Détails:", error);
+      console.error("💡 Variables DB:", {
+        MYSQL_URL: process.env.MYSQL_URL ? "défini" : "non défini",
+        DB_HOST: process.env.DB_HOST,
+        DB_NAME: process.env.DB_NAME,
+        NODE_ENV: process.env.NODE_ENV
+      });
       process.exit(1);
     });
 }
