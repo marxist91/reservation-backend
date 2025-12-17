@@ -47,6 +47,8 @@ if (process.env.APP_URL && !allowedOrigins.includes(process.env.APP_URL)) {
   allowedOrigins.push(process.env.APP_URL);
 }
 
+console.log("🌐 CORS Origins autorisées:", allowedOrigins);
+
 app.use(cors({
   origin: function(origin, callback) {
     // Autoriser les requêtes sans origin (mobile apps, Postman, etc.)
@@ -56,6 +58,7 @@ app.use(cors({
       callback(null, true);
     } else {
       console.warn(`🚫 CORS blocked origin: ${origin}`);
+      console.warn(`   Allowed origins: ${allowedOrigins.join(', ')}`);
       callback(new Error('Not allowed by CORS'));
     }
   },
