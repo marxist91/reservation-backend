@@ -47,24 +47,26 @@ const config = {
     // Support Railway MYSQL_URL ou variables individuelles
     const mysqlUrl = process.env.MYSQL_URL || process.env.DATABASE_URL;
     
+    console.log("🔍 DATABASE CONFIG: mysqlUrl =", mysqlUrl ? mysqlUrl.substring(0, 40) + "..." : "NON DÉFINI");
+    
     if (mysqlUrl) {
       // Parser l'URL MySQL de Railway
       try {
         const url = new URL(mysqlUrl);
         console.log("🔍 MYSQL_URL parsé:", {
           host: url.hostname,
-          port: url.port,
+          port: url.port || "3306",
           user: url.username,
           database: url.pathname.slice(1)
         });
         return {
           username: url.username,
           password: decodeURIComponent(url.password),
-          database: url.pathname.slice(1), // Enlever le /
+          database: url.pathname.slice(1),
           host: url.hostname,
           port: parseInt(url.port) || 3306,
           dialect: 'mysql',
-          logging: false,
+          logging: console.log, // Activer les logs SQL pour debug
           pool: {
             max: 20,
             min: 5,
