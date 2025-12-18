@@ -138,6 +138,32 @@ app.get("/api/test-resend", async (req, res) => {
   }
 });
 
+// Route de test SendGrid (utilise explicitement l'API SendGrid)
+app.get("/api/test-sendgrid", async (req, res) => {
+  try {
+    const emailService = require('./services/emailService');
+
+    if (!process.env.SENDGRID_API_KEY && !emailService.sendgridApiKey) {
+      return res.json({ success: false, message: "Clé SendGrid absente. Définissez SENDGRID_API_KEY dans les variables d'environnement." });
+    }
+
+    const to = process.env.EMAIL_USER || process.env.EMAIL_FROM || 'test@local';
+    const subject = `Test SendGrid - ${new Date().toISOString()}`;
+    const html = `<h1>Test SendGrid</h1><p>Envoi via l'API SendGrid depuis l'application.</p>`;
+
+    const result = await emailService.sendViaSendGrid({ to, subject, html });
+
+    if (result && result.status === 'ok') {
+      return res.json({ success: true, message: 'Email envoyé via SendGrid (réponse API)', data: result });
+    }
+
+    return res.json({ success: false, message: 'Échec appel SendGrid', details: result });
+  } catch (error) {
+    console.error('❌ Erreur test SendGrid:', error);
+    return res.json({ success: false, message: 'Erreur interne lors du test SendGrid', error: error.message });
+  }
+});
+
 // ========================================
 // 📂 CHARGEMENT DES ROUTES
 // ========================================

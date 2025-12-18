@@ -159,6 +159,12 @@ class EmailService {
             this.resendEnabled = true;
             console.log('✅ Resend API configurée (envoi via API HTTP)');
           }
+          // Si SendGrid est configuré, on l'active
+          if (process.env.SENDGRID_API_KEY) {
+            this.sendgridApiKey = process.env.SENDGRID_API_KEY;
+            this.sendgridEnabled = true;
+            console.log('✅ SendGrid API configurée (envoi via API HTTP)');
+          }
 
           this.transporter = nodemailer.createTransport({
             host: process.env.EMAIL_HOST,
@@ -879,6 +885,22 @@ class EmailService {
       }
     }
 
+    // Si SendGrid est activé, on envoie via l'API SendGrid
+    if (this.sendgridEnabled && this.sendgridApiKey) {
+      try {
+        const sgResult = await this.sendViaSendGrid({ to, subject, html });
+        if (sgResult && sgResult.status === 'ok') {
+          console.log(`✅ Email envoyé via SendGrid à ${to}`);
+          return sgResult;
+        }
+        console.error('❌ Erreur SendGrid:', sgResult);
+        return null;
+      } catch (err) {
+        console.error('❌ Exception envoi via SendGrid:', err.message || err);
+        return null;
+      }
+    }
+
     // Sinon, on tente l'envoi SMTP via nodemailer
     try {
       const info = await this.transporter.sendMail({
@@ -939,6 +961,54 @@ class EmailService {
             }
           } catch (e) {
             resolve({ status: 'error', error: e.message, raw: body });
+          }
+        });
+      });
+
+      req.on('error', (err) => resolve({ status: 'error', error: err.message }));
+      req.on('timeout', () => { req.destroy(); resolve({ status: 'error', error: 'timeout' }); });
+      req.write(payload);
+      req.end();
+    });
+  }
+
+  /**
+   * Envoi via l'API SendGrid (https://api.sendgrid.com/v3/mail/send)
+   * Utilise le champ SENDGRID_API_KEY pour l'autorisation
+   */
+  async sendViaSendGrid({ to, subject, html }) {
+    if (!this.sendgridApiKey) return { status: 'error', error: 'no_api_key' };
+
+    const payload = JSON.stringify({
+      personalizations: [{ to: [{ email: to }] }],
+      from: { email: process.env.EMAIL_FROM || process.env.EMAIL_USER },
+      subject: subject,
+      content: [{ type: 'text/html', value: html }]
+    });
+
+    const options = {
+      hostname: 'api.sendgrid.com',
+      path: '/v3/mail/send',
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${this.sendgridApiKey}`,
+        'Content-Length': Buffer.byteLength(payload),
+      },
+      timeout: 10000,
+    };
+
+    return new Promise((resolve) => {
+      const req = https.request(options, (res) => {
+        let body = '';
+        res.on('data', chunk => body += chunk);
+        res.on('end', () => {
+          if (res.statusCode >= 200 && res.statusCode < 300) {
+            resolve({ status: 'ok', statusCode: res.statusCode });
+          } else {
+            let parsed = null;
+            try { parsed = body ? JSON.parse(body) : null; } catch (e) { parsed = body; }
+            resolve({ status: 'error', statusCode: res.statusCode, body: parsed });
           }
         });
       });
