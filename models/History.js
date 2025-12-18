@@ -52,7 +52,10 @@ module.exports = (sequelize, DataTypes) => {
     sequelize,
     modelName: 'History',
     tableName: 'historique',
-    timestamps: true
+    timestamps: true,
+    underscored: true,
+    createdAt: 'created_at',
+    updatedAt: 'updated_at'
   });
 
   return History;

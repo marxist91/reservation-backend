@@ -18,7 +18,7 @@ router.get("/", authMiddleware, async (req, res) => {
         order: [["created_at", "DESC"]],
         include: [
           { model: User, as: 'utilisateur', attributes: ['id', 'nom', 'email'] },
-          { model: Reservation, as: 'reservation', attributes: ['id', 'date', 'heure_debut', 'heure_fin', 'user_id'] }
+          { model: Reservation, as: 'reservation', attributes: ['id', 'date_debut', 'date_fin', 'user_id'] }
         ]
       });
     } else {
@@ -32,7 +32,7 @@ router.get("/", authMiddleware, async (req, res) => {
           { 
             model: Reservation, 
             as: 'reservation', 
-            attributes: ['id', 'date', 'heure_debut', 'heure_fin', 'user_id'],
+            attributes: ['id', 'date_debut', 'date_fin', 'user_id'],
             required: false // LEFT JOIN pour inclure aussi les entrées sans réservation
           }
         ],
@@ -61,10 +61,10 @@ router.get("/", authMiddleware, async (req, res) => {
         
         const history = await History.findAll({
             where: whereClause,
-            order: [["createdAt", "DESC"]],
+            order: [["created_at", "DESC"]],
             include: [
               { model: User, as: 'utilisateur', attributes: ['id', 'nom', 'email'] },
-              { model: Reservation, as: 'reservation', attributes: ['id', 'date', 'heure_debut', 'heure_fin'] }
+              { model: Reservation, as: 'reservation', attributes: ['id', 'date_debut', 'date_fin'] }
             ]
           });
           res.json(history);
