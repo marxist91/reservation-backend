@@ -11,15 +11,24 @@ const autoAudit = require("../middlewares/autoAudit");
 const { Notification } = require("../models");
 const ACTIONS = require("../constants/actions");
 
-// GET /api/notifications (Liste des notifications du user connecté)
+// GET /api/notifications (Liste des notifications - Admin/Responsable voient tout, User voit les siennes)
 router.get("/", authMiddleware, verifyRole(ROLES_NOTIFICATION_VIEW), async (req, res) => {
   try {
     const userId = req.user.id;
+    const userRole = req.user.role;
+    
+    let whereClause = { user_id: userId };
+    
+    // Admin et responsables voient TOUTES les notifications (globales)
+    if (userRole === 'admin' || userRole === 'responsable' || userRole === 'responsable_salle') {
+      whereClause = {}; // Pas de filtre = toutes les notifications
+    }
+    
     const notifications = await Notification.findAll({
-      where: { user_id: userId },
-      order: [["created_at", "DESC"]] // Utilisation de created_at (snake_case)
+      where: whereClause,
+      order: [["created_at", "DESC"]]
     });
-    console.log(`📧 Notifications renvoyées pour user ${userId}:`, notifications.length, 'notification(s)');
+    console.log(`📧 Notifications renvoyées pour user ${userId} (${userRole}):`, notifications.length, 'notification(s)');
     res.json(notifications);
   } catch (error) {
     console.error("❌ Erreur GET /notifications :", error);
