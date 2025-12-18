@@ -1,4 +1,5 @@
 const nodemailer = require("nodemailer");
+const https = require('https');
 const fs = require("fs");
 const path = require("path");
 
@@ -151,34 +152,34 @@ class EmailService {
             padding: 40px 20px;
         }
         
-        .container {
-            max-width: 640px;
-            margin: 0 auto;
-            background: #ffffff;
-            border-radius: 16px;
-            overflow: hidden;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        try {
+          // Si une clé Resend est présente, on l'active (préférée en production)
+          if (process.env.RESEND_API_KEY) {
+            this.resendApiKey = process.env.RESEND_API_KEY;
+            this.resendEnabled = true;
+            console.log('✅ Resend API configurée (envoi via API HTTP)');
+          }
+
+          this.transporter = nodemailer.createTransport({
+            host: process.env.EMAIL_HOST,
+            port: parseInt(process.env.EMAIL_PORT, 10),
+            secure: process.env.EMAIL_SECURE === 'true', // true pour port 465, false pour les autres
+            auth: {
+              user: process.env.EMAIL_USER,
+              pass: process.env.EMAIL_PASSWORD,
+            },
+            // Timeouts pour éviter les blocages sur serveurs cloud
+            connectionTimeout: 10000, // 10 secondes pour établir la connexion
+            greetingTimeout: 10000,   // 10 secondes pour le greeting SMTP
+            socketTimeout: 15000,     // 15 secondes pour les opérations socket
+          });
+
+          this.isConfigured = true;
+          console.log('✅ Service email (nodemailer) configuré avec succès');
+        } catch (error) {
+          console.error('❌ Erreur lors de la configuration du service email:', error.message);
+          this.isConfigured = false;
         }
-        
-        .header {
-            background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 50%, #1e40af 100%);
-            padding: 40px 30px;
-            text-align: center;
-            position: relative;
-        }
-        
-        .header::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: url('data:image/svg+xml,<svg width="100" height="100" xmlns="http://www.w3.org/2000/svg"><defs><pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse"><path d="M 20 0 L 0 0 0 20" fill="none" stroke="rgba(255,255,255,0.05)" stroke-width="1"/></pattern></defs><rect width="100" height="100" fill="url(%23grid)"/></svg>');
-            opacity: 0.3;
-        }
-        
-        .logo-container {
             background: rgba(255, 255, 255, 0.95);
             padding: 15px 25px;
             border-radius: 12px;
@@ -861,7 +862,24 @@ class EmailService {
       console.warn('⚠️  Service email non configuré. Email non envoyé à:', to);
       return null;
     }
+    // Si Resend est activé, on envoie via l'API HTTP (préféré en production)
+    if (this.resendEnabled && this.resendApiKey) {
+      try {
+        const result = await this.sendViaResend({ to, subject, html });
+        if (result && result.status === 'ok') {
+          console.log(`✅ Email envoyé via Resend à ${to}: ${result.data?.id || 'ok'}`);
+          return result;
+        }
 
+        console.error('❌ Erreur Resend:', result);
+        return null;
+      } catch (err) {
+        console.error('❌ Exception envoi via Resend:', err.message || err);
+        return null;
+      }
+    }
+
+    // Sinon, on tente l'envoi SMTP via nodemailer
     try {
       const info = await this.transporter.sendMail({
         from: `"${process.env.EMAIL_FROM_NAME || 'Réservation PAL'}" <${process.env.EMAIL_FROM || process.env.EMAIL_USER}>`,
@@ -879,6 +897,57 @@ class EmailService {
       console.warn('📧 L\'email n\'a pas été envoyé mais la notification en base reste active');
       return null; // Retourne null au lieu de throw pour continuer l'exécution
     }
+  }
+
+  /**
+   * Envoi via l'API Resend (https://api.resend.com/emails)
+   * Utilise le champ RESEND_API_KEY pour l'autorisation
+   */
+  async sendViaResend({ to, subject, html }) {
+    if (!this.resendApiKey) return { status: 'error', error: 'no_api_key' };
+
+    const payload = JSON.stringify({
+      from: process.env.EMAIL_FROM || process.env.EMAIL_USER,
+      to,
+      subject,
+      html,
+    });
+
+    const options = {
+      hostname: 'api.resend.com',
+      path: '/emails',
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${this.resendApiKey}`,
+        'Content-Length': Buffer.byteLength(payload),
+      },
+      timeout: 10000,
+    };
+
+    return new Promise((resolve) => {
+      const req = https.request(options, (res) => {
+        let body = '';
+        res.on('data', chunk => body += chunk);
+        res.on('end', () => {
+          try {
+            const parsed = body ? JSON.parse(body) : null;
+            if (res.statusCode >= 200 && res.statusCode < 300) {
+              resolve({ status: 'ok', data: parsed });
+            } else {
+              resolve({ status: 'error', statusCode: res.statusCode, body: parsed || body });
+            }
+          } catch (e) {
+            resolve({ status: 'error', error: e.message, raw: body });
+          }
+        });
+      });
+
+      req.on('error', (err) => resolve({ status: 'error', error: err.message }));
+      req.on('timeout', () => { req.destroy(); resolve({ status: 'error', error: 'timeout' }); });
+      req.write(payload);
+      req.end();
+    });
   }
 
   /**
