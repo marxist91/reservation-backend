@@ -87,6 +87,10 @@ class EmailService {
           user: process.env.EMAIL_USER,
           pass: process.env.EMAIL_PASSWORD,
         },
+        // Timeouts pour éviter les blocages sur serveurs cloud
+        connectionTimeout: 10000, // 10 secondes pour établir la connexion
+        greetingTimeout: 10000,   // 10 secondes pour le greeting SMTP
+        socketTimeout: 15000,     // 15 secondes pour les opérations socket
       });
 
       this.isConfigured = true;
@@ -869,8 +873,11 @@ class EmailService {
       console.log(`✅ Email envoyé à ${to}: ${info.messageId}`);
       return info;
     } catch (error) {
+      // Log l'erreur mais ne pas la propager - fail silently
+      // Ceci permet à l'application de continuer même si l'email échoue
       console.error(`❌ Erreur lors de l'envoi d'email à ${to}:`, error.message);
-      throw error;
+      console.warn('📧 L\'email n\'a pas été envoyé mais la notification en base reste active');
+      return null; // Retourne null au lieu de throw pour continuer l'exécution
     }
   }
 
