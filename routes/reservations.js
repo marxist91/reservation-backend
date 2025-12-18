@@ -275,125 +275,117 @@ router.put( "/validate/:id",authMiddleware, verifyRole(ROLES_RESERVATION_VALIDAT
         reservation.rejection_reason = rejection_reason;
         await reservation.save();
 
-        // Si une salle alternative est proposée
-        if (proposed_alternative && proposed_alternative.proposed_room_id && proposed_alternative.proposed_date_debut && proposed_alternative.proposed_date_fin) {
-          const { ProposedAlternative } = require('../models');
-          
-          try {
-            const alternative = await ProposedAlternative.create({
-              original_reservation_id: reservation.id,
-              proposed_room_id: proposed_alternative.proposed_room_id,
-              proposed_date_debut: proposed_alternative.proposed_date_debut,
-              proposed_date_fin: proposed_alternative.proposed_date_fin,
-              motif: proposed_alternative.motif || 'Salle alternative proposée',
-              proposed_by: req.user.id,
-              status: 'pending'
-            });
-
-            console.log('✅ Proposition alternative créée:', alternative.id);
-
-            // Notification pour l'utilisateur avec proposition alternative
-            await Notification.create({
-              user_id: reservation.user_id,
-              type: 'alternative_proposed',
-              titre: 'Proposition de salle alternative',
-              message: `Votre réservation a été refusée. Une salle alternative vous a été proposée. Consultez vos notifications pour accepter ou refuser.`,
-              reservation_id: reservation.id,
-              lien: '/reservations',
-              lue: false
-            });
-          } catch (altError) {
-            console.error("⚠️ Erreur création alternative:", altError);
-          }
-        } else {
-          // Notification normale de refus sans alternative
-          await Notification.create({
-            user_id: reservation.user_id,
-            type: 'reservation_rejected',
-            titre: 'Réservation refusée',
-            message: `Votre réservation pour la salle "${reservation.salle?.nom || 'N/A'}" le ${reservation.date} a été refusée. Motif: ${rejection_reason}`,
-            reservation_id: reservation.id,
-            lien: '/reservations',
-            lue: false
-          });
-
-          // Envoyer email de refus
-          try {
-            await emailService.sendReservationRejected(reservation.utilisateur, reservation, rejection_reason);
-            console.log(`📧 Email de refus envoyé à ${reservation.utilisateur.email}`);
-          } catch (emailError) {
-            console.error("⚠️ Erreur envoi email de refus:", emailError.message);
-          }
-        }
-
-        // Créer historique
-        try {
-          await History.create({
-            user_id: req.user.id,
-            type: 'REFUS',
-            action: 'Refus de réservation',
-            description: `La réservation a été refusée par ${req.user.nom || 'un administrateur'}. Motif: ${rejection_reason}${proposed_alternative ? ' (Alternative proposée)' : ''}`,
-            reservation_id: reservation.id,
-            details: { ancien_statut: 'en_attente', nouveau_statut: 'rejetee', motif_refus: rejection_reason, alternative_proposee: !!proposed_alternative }
-          });
-        } catch (histError) {
-          console.error("⚠️ Erreur création historique:", histError);
-        }
-
-        return res.json({ 
+        // Répondre immédiatement au client
+        res.json({ 
           success: true, 
           updated: reservation,
           alternative_proposed: !!proposed_alternative,
           message: proposed_alternative ? "Réservation refusée avec proposition alternative" : "Réservation refusée avec succès"
         });
+
+        // --- NOTIFICATIONS EN ARRIÈRE-PLAN ---
+        setImmediate(async () => {
+          try {
+            // Si une salle alternative est proposée
+            if (proposed_alternative && proposed_alternative.proposed_room_id && proposed_alternative.proposed_date_debut && proposed_alternative.proposed_date_fin) {
+              const { ProposedAlternative } = require('../models');
+              
+              await ProposedAlternative.create({
+                original_reservation_id: reservation.id,
+                proposed_room_id: proposed_alternative.proposed_room_id,
+                proposed_date_debut: proposed_alternative.proposed_date_debut,
+                proposed_date_fin: proposed_alternative.proposed_date_fin,
+                motif: proposed_alternative.motif || 'Salle alternative proposée',
+                proposed_by: req.user.id,
+                status: 'pending'
+              });
+
+              await Notification.create({
+                user_id: reservation.user_id,
+                type: 'alternative_proposed',
+                titre: 'Proposition de salle alternative',
+                message: `Votre réservation a été refusée. Une salle alternative vous a été proposée.`,
+                reservation_id: reservation.id,
+                lu: false
+              });
+            } else {
+              // Notification normale de refus sans alternative
+              await Notification.create({
+                user_id: reservation.user_id,
+                type: 'reservation_rejected',
+                titre: 'Réservation refusée',
+                message: `Votre réservation pour la salle "${reservation.salle?.nom || 'N/A'}" a été refusée. Motif: ${rejection_reason}`,
+                reservation_id: reservation.id,
+                lu: false
+              });
+
+              // Envoyer email de refus (sans bloquer)
+              emailService.sendReservationRejected(reservation.utilisateur, reservation, rejection_reason)
+                .then(() => console.log(`📧 Email de refus envoyé à ${reservation.utilisateur.email}`))
+                .catch(emailError => console.error("⚠️ Erreur envoi email de refus:", emailError.message));
+            }
+
+            // Créer historique
+            await History.create({
+              user_id: req.user.id,
+              type: 'REFUS',
+              action: 'Refus de réservation',
+              description: `La réservation a été refusée par ${req.user.nom || 'un administrateur'}. Motif: ${rejection_reason}`,
+              reservation_id: reservation.id,
+              details: { ancien_statut: 'en_attente', nouveau_statut: 'rejetee', motif_refus: rejection_reason, alternative_proposee: !!proposed_alternative }
+            });
+          } catch (bgError) {
+            console.error("⚠️ Erreur notifications arrière-plan:", bgError.message);
+          }
+        });
+        // --- FIN NOTIFICATIONS ---
+        return;
       } else {
         // Par défaut : validation
-        reservation.statut = "validée";
+        reservation.statut = "validee";
         await reservation.save();
 
-        // Créer notification en BDD
-        try {
-          const notif = await Notification.create({
-            user_id: reservation.user_id,
-            type: 'reservation_validated',
-            titre: 'Réservation validée',
-            message: `Votre réservation pour la salle "${reservation.salle?.nom || 'N/A'}" le ${reservation.date} a été validée.`,
-            reservation_id: reservation.id,
-            lu: false
-          });
-          console.log(`✅ Notification créée pour user ${reservation.user_id}:`, notif.id);
-        } catch (notifError) {
-          console.error("⚠️ Erreur création notification BDD:", notifError);
-        }
-
-        // Envoyer email de validation
-        try {
-          await emailService.sendReservationValidated(reservation.utilisateur, reservation);
-          console.log(`📧 Email de validation envoyé à ${reservation.utilisateur.email}`);
-        } catch (emailError) {
-          console.error("⚠️ Erreur envoi email de validation:", emailError.message);
-          // Ne pas bloquer la validation si l'email échoue
-        }
-
-        // Créer historique
-        try {
-          await History.create({
-            user_id: req.user.id,
-            type: 'VALIDATION',
-            action: 'Validation de réservation',
-            description: `La réservation a été validée par ${req.user.nom || 'un administrateur'}.`,
-            reservation_id: reservation.id,
-            details: { ancien_statut: 'en_attente', nouveau_statut: 'validée' }
-          });
-        } catch (histError) {
-          console.error("⚠️ Erreur création historique:", histError);
-        }
-
-        return res.json({ 
+        // Répondre immédiatement au client
+        res.json({ 
           success: true, 
           updated: reservation,
           message: "Réservation validée avec succès"
         });
+
+        // --- NOTIFICATIONS EN ARRIÈRE-PLAN ---
+        setImmediate(async () => {
+          try {
+            // Créer notification en BDD
+            await Notification.create({
+              user_id: reservation.user_id,
+              type: 'reservation_validated',
+              titre: 'Réservation validée',
+              message: `Votre réservation pour la salle "${reservation.salle?.nom || 'N/A'}" a été validée.`,
+              reservation_id: reservation.id,
+              lu: false
+            });
+            console.log(`✅ Notification créée pour user ${reservation.user_id}`);
+
+            // Envoyer email de validation (sans bloquer)
+            emailService.sendReservationValidated(reservation.utilisateur, reservation)
+              .then(() => console.log(`📧 Email de validation envoyé à ${reservation.utilisateur.email}`))
+              .catch(emailError => console.error("⚠️ Erreur envoi email de validation:", emailError.message));
+
+            // Créer historique
+            await History.create({
+              user_id: req.user.id,
+              type: 'VALIDATION',
+              action: 'Validation de réservation',
+              description: `La réservation a été validée par ${req.user.nom || 'un administrateur'}.`,
+              reservation_id: reservation.id,
+              details: { ancien_statut: 'en_attente', nouveau_statut: 'validee' }
+            });
+          } catch (bgError) {
+            console.error("⚠️ Erreur notifications arrière-plan:", bgError.message);
+          }
+        });
+        // --- FIN NOTIFICATIONS ---
+        return;
       }
     } catch (error) {
       console.error("⚠️ Erreur PUT /reservations/validate/:id :", error);
