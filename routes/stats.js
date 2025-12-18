@@ -98,8 +98,6 @@ router.get('/reservations-by-department', authMiddleware, async (req, res) => {
   }
 });
 
-module.exports = router;
-
 // New endpoint: GET /api/stats/overview
 // Returns a consolidated statistics object for the frontend (KPIs, top rooms, evolution, status distribution, departments, room occupancy)
 router.get('/overview', authMiddleware, async (req, res) => {
@@ -245,3 +243,5 @@ router.get('/overview', authMiddleware, async (req, res) => {
     return res.status(500).json({ error: 'Erreur serveur' });
   }
 });
+
+module.exports = router;
