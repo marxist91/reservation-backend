@@ -151,13 +151,16 @@ router.put(
     async (req, res) => {
       try {
         const { notificationId } = req.params;
+        const userRole = req.user.role;
         const notif = await Notification.findByPk(notificationId);
   
         if (!notif) {
           return res.status(404).json({ error: "Notification introuvable" });
         }
         
-        if (notif.user_id !== req.user.id && req.user.role !== 'admin') {
+        // Admin et responsables peuvent marquer n'importe quelle notification
+        const isAdminOrResponsable = userRole === 'admin' || userRole === 'responsable' || userRole === 'responsable_salle';
+        if (notif.user_id !== req.user.id && !isAdminOrResponsable) {
             return res.status(403).json({ error: "Accès non autorisé" });
         }
   
@@ -180,9 +183,17 @@ router.put(
     async (req, res) => {
       try {
         const userId = req.user.id;
-        await Notification.update({ lu: true }, {
-            where: { user_id: userId, lu: false }
-        });
+        const userRole = req.user.role;
+        
+        let whereClause = { user_id: userId, lu: false };
+        
+        // Admin et responsables marquent TOUTES les notifications comme lues
+        if (userRole === 'admin' || userRole === 'responsable' || userRole === 'responsable_salle') {
+          whereClause = { lu: false };
+        }
+        
+        await Notification.update({ lu: true }, { where: whereClause });
+        console.log(`✅ Notifications marquées comme lues pour ${userRole}`);
         return res.json({ success: true });
       } catch (error) {
         console.error(" Erreur PUT /notifications/read-all :", error);
