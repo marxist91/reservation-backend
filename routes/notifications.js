@@ -11,17 +11,28 @@ const autoAudit = require("../middlewares/autoAudit");
 const { Notification } = require("../models");
 const ACTIONS = require("../constants/actions");
 
-// GET /api/notifications (Liste des notifications - Admin/Responsable voient tout, User voit les siennes)
+// GET /api/notifications (Liste des notifications - Admin/Responsable voient demandes + leurs propres, User voit les siennes)
 router.get("/", authMiddleware, verifyRole(ROLES_NOTIFICATION_VIEW), async (req, res) => {
   try {
     const userId = req.user.id;
     const userRole = req.user.role;
+    const { Op } = require('sequelize');
     
     let whereClause = { user_id: userId };
     
-    // Admin et responsables voient TOUTES les notifications (globales)
+    // Admin et responsables voient:
+    // 1. Leurs propres notifications
+    // 2. Les notifications de type "demande" (nouvelles réservations à traiter)
     if (userRole === 'admin' || userRole === 'responsable' || userRole === 'responsable_salle') {
-      whereClause = {}; // Pas de filtre = toutes les notifications
+      // Types de notifications globales pour admins/responsables
+      const globalTypes = ['new_reservation', 'reservation_pending', 'reservation_cancelled'];
+      
+      whereClause = {
+        [Op.or]: [
+          { user_id: userId }, // Leurs propres notifications
+          { type: { [Op.in]: globalTypes } } // Notifications de demandes
+        ]
+      };
     }
     
     const notifications = await Notification.findAll({
@@ -184,12 +195,20 @@ router.put(
       try {
         const userId = req.user.id;
         const userRole = req.user.role;
+        const { Op } = require('sequelize');
         
         let whereClause = { user_id: userId, lu: false };
         
-        // Admin et responsables marquent TOUTES les notifications comme lues
+        // Admin et responsables marquent leurs propres + les notifications de demandes
         if (userRole === 'admin' || userRole === 'responsable' || userRole === 'responsable_salle') {
-          whereClause = { lu: false };
+          const globalTypes = ['new_reservation', 'reservation_pending', 'reservation_cancelled'];
+          whereClause = {
+            lu: false,
+            [Op.or]: [
+              { user_id: userId },
+              { type: { [Op.in]: globalTypes } }
+            ]
+          };
         }
         
         await Notification.update({ lu: true }, { where: whereClause });
