@@ -110,6 +110,34 @@ app.get("/api/test-email", async (req, res) => {
   }
 });
 
+// Route de test Resend (utilise explicitement l'API Resend)
+app.get("/api/test-resend", async (req, res) => {
+  try {
+    const emailService = require('./services/emailService');
+
+    // Vérifier la configuration Resend
+    if (!process.env.RESEND_API_KEY && !emailService.resendApiKey) {
+      return res.json({ success: false, message: "Clé Resend absente. Définissez RESEND_API_KEY dans les variables d'environnement." });
+    }
+
+    // Envoi d'un email de test via Resend
+    const to = process.env.EMAIL_USER || process.env.EMAIL_FROM || 'test@local';
+    const subject = `Test Resend - ${new Date().toISOString()}`;
+    const html = `<h1>Test Resend</h1><p>Envoi via l'API Resend depuis l'application de production.</p>`;
+
+    const result = await emailService.sendViaResend({ to, subject, html });
+
+    if (result && result.status === 'ok') {
+      return res.json({ success: true, message: 'Email envoyé via Resend (réponse API)', data: result.data });
+    }
+
+    return res.json({ success: false, message: 'Échec appel Resend', details: result });
+  } catch (error) {
+    console.error('❌ Erreur test Resend:', error);
+    return res.json({ success: false, message: 'Erreur interne lors du test Resend', error: error.message });
+  }
+});
+
 // ========================================
 // 📂 CHARGEMENT DES ROUTES
 // ========================================
