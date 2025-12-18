@@ -65,7 +65,7 @@ router.get('/reservations-by-department', authMiddleware, async (req, res) => {
 
     const baseQuery = `
       SELECT 
-        COALESCE(d.id, 0) AS department_id,
+        d.id AS department_id,
         COALESCE(d.name, 'Non renseigné') AS department_name,
         COUNT(r.id) AS count
       FROM reservations r
@@ -82,7 +82,7 @@ router.get('/reservations-by-department', authMiddleware, async (req, res) => {
 
     // Total count of distinct departments for the same filter (for pagination UI)
     const countQuery = `
-      SELECT COUNT(DISTINCT COALESCE(d.id, 0)) AS total
+      SELECT COUNT(DISTINCT d.id) AS total
       FROM reservations r
       LEFT JOIN departments d ON r.department_id = d.id
       ${whereSQL}
@@ -156,7 +156,7 @@ router.get('/overview', authMiddleware, async (req, res) => {
 
     // Top salles
     const topSallesQuery = `
-      SELECT r.room_id AS room_id, rm.nom AS nom, COUNT(r.id) AS count
+      SELECT rm.id AS room_id, rm.nom AS nom, COUNT(r.id) AS count
       FROM reservations r
       LEFT JOIN rooms rm ON r.room_id = rm.id
       ${whereSQL}
@@ -203,7 +203,7 @@ router.get('/overview', authMiddleware, async (req, res) => {
 
     // Top departments (reuse existing query logic but limit 5)
     const deptQuery = `
-      SELECT COALESCE(d.id, 0) AS department_id, COALESCE(d.name, 'Non renseigné') AS department_name, COUNT(r.id) AS count
+      SELECT d.id AS department_id, COALESCE(d.name, 'Non renseigné') AS department_name, COUNT(r.id) AS count
       FROM reservations r
       LEFT JOIN departments d ON r.department_id = d.id
       ${whereSQL}
