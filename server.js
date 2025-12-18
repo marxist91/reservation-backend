@@ -18,6 +18,9 @@ console.log("  DATABASE_URL:", process.env.DATABASE_URL ? "DÉFINI (" + process.
 console.log("  MYSQL_URL:", process.env.MYSQL_URL ? "DÉFINI" : "NON DÉFINI");
 console.log("  DB_HOST:", process.env.DB_HOST || "NON DÉFINI");
 console.log("  DB_PORT:", process.env.DB_PORT || "NON DÉFINI");
+console.log("  EMAIL_HOST:", process.env.EMAIL_HOST || "NON DÉFINI");
+console.log("  EMAIL_USER:", process.env.EMAIL_USER || "NON DÉFINI");
+console.log("  EMAIL_FROM:", process.env.EMAIL_FROM || "NON DÉFINI");
 console.log("========================================");
 
 const express = require("express");
@@ -73,6 +76,38 @@ app.use(express.urlencoded({ extended: true }));
 app.use((req, res, next) => {
   console.log(`${req.method} ${req.path}`);
   next();
+});
+
+// Route de test email (temporaire pour debug)
+app.get("/api/test-email", async (req, res) => {
+  try {
+    const emailService = require('./services/emailService');
+    console.log("📧 Test email - isReady:", emailService.isReady());
+    
+    if (!emailService.isReady()) {
+      return res.json({ 
+        success: false, 
+        message: "Service email non configuré",
+        env: {
+          EMAIL_HOST: process.env.EMAIL_HOST || "missing",
+          EMAIL_PORT: process.env.EMAIL_PORT || "missing",
+          EMAIL_USER: process.env.EMAIL_USER ? "set" : "missing",
+          EMAIL_PASSWORD: process.env.EMAIL_PASSWORD ? "set" : "missing"
+        }
+      });
+    }
+    
+    const result = await emailService.sendEmail({
+      to: process.env.EMAIL_USER,
+      subject: "Test Email Railway - " + new Date().toISOString(),
+      html: "<h1>Test réussi!</h1><p>Le service email fonctionne sur Railway.</p>"
+    });
+    
+    return res.json({ success: true, messageId: result?.messageId });
+  } catch (error) {
+    console.error("❌ Erreur test email:", error);
+    return res.json({ success: false, error: error.message });
+  }
 });
 
 // ========================================
