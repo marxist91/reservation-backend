@@ -879,31 +879,40 @@ router.post("/create", authMiddleware, verifyMinimumRole("user"), async (req, re
       department_id: departmentId
     });
 
-    // Notifier les admins
-    try {
-      const admins = await User.findAll({ where: { role: 'admin' } });
-      const createdReservationWithDetails = await Reservation.findByPk(nouvelleReservation.id, {
-        include: [
-          { model: Room, as: 'salle', attributes: ['id', 'nom'] },
-          { model: User, as: 'utilisateur', attributes: ['id', 'nom', 'prenom', 'email'] },
-          { model: require('../models').Department, as: 'department', attributes: ['id', 'name'] }
-        ]
-      });
+    console.log("✅ Réservation créée:", nouvelleReservation.id);
+    
+    // Répondre immédiatement au client AVANT d'envoyer les notifications
+    res.status(201).json({
+      message: "Réservation créée",
+      reservation: nouvelleReservation
+    });
 
-      for (const admin of admins) {
-        // Notification en BDD
-        await Notification.create({
-          user_id: admin.id,
-          type: 'new_reservation',
-          titre: 'Nouvelle demande de réservation',
-          message: `Nouvelle demande de réservation pour la salle (ID: ${room_id}) le ${date}.`,
-          reservation_id: nouvelleReservation.id,
-          lu: false
+    // --- NOTIFICATIONS EN ARRIÈRE-PLAN (après réponse au client) ---
+    setImmediate(async () => {
+      try {
+        // Notifier les admins
+        const admins = await User.findAll({ where: { role: 'admin' } });
+        const createdReservationWithDetails = await Reservation.findByPk(nouvelleReservation.id, {
+          include: [
+            { model: Room, as: 'salle', attributes: ['id', 'nom'] },
+            { model: User, as: 'utilisateur', attributes: ['id', 'nom', 'prenom', 'email'] },
+            { model: require('../models').Department, as: 'department', attributes: ['id', 'name'] }
+          ]
         });
 
-        // Envoyer email
-        try {
-          await emailService.sendNewReservationToAdmins(admin.email, {
+        for (const admin of admins) {
+          // Notification en BDD
+          await Notification.create({
+            user_id: admin.id,
+            type: 'new_reservation',
+            titre: 'Nouvelle demande de réservation',
+            message: `Nouvelle demande de réservation pour la salle (ID: ${room_id}) le ${date}.`,
+            reservation_id: nouvelleReservation.id,
+            lu: false
+          });
+
+          // Envoyer email (sans attendre)
+          emailService.sendNewReservationToAdmins(admin.email, {
             userName: `${createdReservationWithDetails.utilisateur.prenom} ${createdReservationWithDetails.utilisateur.nom}`,
             userEmail: createdReservationWithDetails.utilisateur.email,
             roomName: createdReservationWithDetails.salle?.nom || `Salle #${room_id}`,
@@ -923,84 +932,47 @@ router.post("/create", authMiddleware, verifyMinimumRole("user"), async (req, re
             }),
             motif: createdReservationWithDetails.motif || 'Non spécifié',
             department: createdReservationWithDetails.department?.name || null
+          }).catch(emailError => {
+            console.error(`⚠️ Erreur envoi email à admin ${admin.email}:`, emailError.message);
           });
-          console.log(`📧 Email de nouvelle réservation envoyé à ${admin.email}`);
-        } catch (emailError) {
-          console.error(`⚠️ Erreur envoi email à admin ${admin.email}:`, emailError.message);
         }
-      }
-    } catch (notifError) {
-      console.error("⚠️ Erreur création notification admin:", notifError);
-    }
 
-    // Notifier le responsable de la salle (s'il existe)
-    try {
-      const salle = await Room.findByPk(room_id, {
-        include: [{ model: User, as: 'responsable', attributes: ['id', 'nom', 'prenom', 'email', 'role'] }]
-      });
-      console.log('🔎 Debug salle (plain):', salle ? salle.get({ plain: true }) : null);
-
-      if (salle && salle.responsable && salle.responsable.id) {
-        const resp = salle.responsable;
-        // Créer notification en base pour le responsable
-        const created = await Notification.create({
-          user_id: resp.id,
-          type: 'new_reservation',
-          titre: 'Nouvelle demande de réservation (salle sous votre responsabilité)',
-          message: `Nouvelle demande de réservation pour la salle "${salle.nom || 'ID:'+room_id}" le ${date}.`,
-          reservation_id: nouvelleReservation.id,
-          lu: false
+        // Notifier le responsable de la salle (s'il existe)
+        const salle = await Room.findByPk(room_id, {
+          include: [{ model: User, as: 'responsable', attributes: ['id', 'nom', 'prenom', 'email', 'role'] }]
         });
-        console.log(`✅ Notification créée pour responsable (user ${resp.id}):`, created.id);
 
-        // Optionnel: log et/ou appel utilitaire de push
-        try {
-          await sendNotification({
-            to: resp.email || `user:${resp.id}`,
-            subject: 'Nouvelle demande de réservation',
-            message: `La salle ${salle.nom || 'ID:'+room_id} a une nouvelle demande pour le ${date}.`,
-            meta: { reservationId: nouvelleReservation.id, roomId: room_id }
+        if (salle && salle.responsable && salle.responsable.id) {
+          const resp = salle.responsable;
+          await Notification.create({
+            user_id: resp.id,
+            type: 'new_reservation',
+            titre: 'Nouvelle demande de réservation (salle sous votre responsabilité)',
+            message: `Nouvelle demande de réservation pour la salle "${salle.nom || 'ID:'+room_id}" le ${date}.`,
+            reservation_id: nouvelleReservation.id,
+            lu: false
           });
-        } catch (pushErr) {
-          console.warn('⚠️ Erreur sendNotification pour responsable:', pushErr.message || pushErr);
-        }
-      } else {
-        console.log(`ℹ️ Salle ${room_id} sans responsable attribué (responsable_id=${salle ? salle.responsable_id : 'N/A'})`);
-      }
-    } catch (errResp) {
-      console.error('⚠️ Erreur notification responsable salle:', errResp);
-    }
-    // Si pas de responsable spécifique, notifier tous les responsables (roles `responsable` ou `responsable_salle`)
-    try {
-      const salleCheck = await Room.findByPk(room_id);
-      const hasResponsable = salleCheck && salleCheck.responsable_id;
-      if (!hasResponsable) {
-        const responsablesGlobal = await User.findAll({ where: { role: { [Op.in]: ['responsable', 'responsable_salle'] } } });
-        console.log(`ℹ️ Pas de responsable attribué pour la salle ${room_id} — notifications globales vers ${responsablesGlobal.length} responsable(s)`);
-        for (const r of responsablesGlobal) {
-          try {
-            const created = await Notification.create({
+          console.log(`✅ Notification créée pour responsable (user ${resp.id})`);
+        } else {
+          // Notifier tous les responsables si pas de responsable attribué
+          const responsablesGlobal = await User.findAll({ where: { role: { [Op.in]: ['responsable', 'responsable_salle'] } } });
+          for (const r of responsablesGlobal) {
+            await Notification.create({
               user_id: r.id,
               type: 'new_reservation',
               titre: 'Nouvelle demande de réservation',
               message: `Nouvelle demande de réservation pour la salle (ID: ${room_id}) le ${date}.`,
               reservation_id: nouvelleReservation.id,
               lu: false
-            });
-            console.log(`✅ Notification créée pour responsable global (user ${r.id}):`, created.id);
-          } catch (e) {
-            console.warn('⚠️ Erreur création notification pour responsable global:', e.message || e);
+            }).catch(e => console.warn('⚠️ Erreur notification responsable:', e.message));
           }
         }
+        console.log("✅ Notifications envoyées en arrière-plan");
+      } catch (bgError) {
+        console.error("⚠️ Erreur notifications arrière-plan:", bgError.message);
       }
-    } catch (e) {
-      console.error('⚠️ Erreur notification responsables globaux:', e);
-    }
-    console.log("✅ Réservation créée:", nouvelleReservation.id);
-    return res.status(201).json({
-      message: "RÃ©servation crÃ©Ã©e",
-      reservation: nouvelleReservation
     });
+    // --- FIN NOTIFICATIONS ARRIÈRE-PLAN ---
   } catch (error) {
     console.error("âŒ Erreur POST/api/reservations/create:", error.message);
     console.error("Stack:", error.stack);
