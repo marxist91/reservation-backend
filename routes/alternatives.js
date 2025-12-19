@@ -151,8 +151,9 @@ router.post('/:id/accept', authenticateToken, async (req, res) => {
       }, { transaction });
 
       // Envoyer email à l'admin qui a proposé l'alternative
-      try {
-        await emailService.sendAlternativeAccepted(alternative.proposer.email, {
+      // Envoyer les emails en arrière-plan pour éviter de bloquer la réponse HTTP
+      setImmediate(() => {
+        emailService.sendAlternativeAccepted(alternative.proposer.email, {
           proposerName: `${alternative.proposer.prenom} ${alternative.proposer.nom}`,
           userName: `${currentUser.prenom} ${currentUser.nom}`,
           roomName: alternative.proposedRoom.nom,
@@ -163,11 +164,12 @@ router.post('/:id/accept', authenticateToken, async (req, res) => {
             day: 'numeric' 
           }),
           time: `${new Date(alternative.proposed_date_debut).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })} - ${new Date(alternative.proposed_date_fin).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}`
+        }).then(() => {
+          console.log(`📧 Email d'acceptation envoyé à ${alternative.proposer.email}`);
+        }).catch((emailError) => {
+          console.error("⚠️ Erreur envoi email d'acceptation:", emailError && emailError.message ? emailError.message : emailError);
         });
-        console.log(`📧 Email d'acceptation envoyé à ${alternative.proposer.email}`);
-      } catch (emailError) {
-        console.error("⚠️ Erreur envoi email d'acceptation:", emailError.message);
-      }
+      });
     }
 
     await transaction.commit();
