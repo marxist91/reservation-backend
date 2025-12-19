@@ -882,7 +882,7 @@ router.post("/create", authMiddleware, verifyMinimumRole("user"), async (req, re
     // --- NOTIFICATIONS EN ARRIÈRE-PLAN (après réponse au client) ---
     setImmediate(async () => {
       try {
-        // Notifier les admins
+        // Notifier les admins / responsables (dédupliquer les destinataires)
         const admins = await User.findAll({ where: { role: 'admin' } });
         const createdReservationWithDetails = await Reservation.findByPk(nouvelleReservation.id, {
           include: [
@@ -891,72 +891,61 @@ router.post("/create", authMiddleware, verifyMinimumRole("user"), async (req, re
             { model: require('../models').Department, as: 'department', attributes: ['id', 'name'] }
           ]
         });
+        // Rassembler les destinataires (IDs) et dédupliquer
+        const recipientIds = new Set();
 
-        for (const admin of admins) {
-          // Notification en BDD
-          await Notification.create({
-            user_id: admin.id,
-            type: 'new_reservation',
-            titre: 'Nouvelle demande de réservation',
-            message: `Nouvelle demande de réservation pour la salle (ID: ${room_id}) le ${date}.`,
-            reservation_id: nouvelleReservation.id,
-            lu: false
-          });
+        // Ajouter admins
+        for (const admin of admins) recipientIds.add(admin.id);
 
-          // Envoyer email (sans attendre)
-          emailService.sendNewReservationToAdmins(admin.email, {
-            userName: `${createdReservationWithDetails.utilisateur.prenom} ${createdReservationWithDetails.utilisateur.nom}`,
-            userEmail: createdReservationWithDetails.utilisateur.email,
-            roomName: createdReservationWithDetails.salle?.nom || `Salle #${room_id}`,
-            date: new Date(createdReservationWithDetails.date_debut).toLocaleDateString('fr-FR', { 
-              weekday: 'long', 
-              year: 'numeric', 
-              month: 'long', 
-              day: 'numeric' 
-            }),
-            startTime: new Date(createdReservationWithDetails.date_debut).toLocaleTimeString('fr-FR', { 
-              hour: '2-digit', 
-              minute: '2-digit' 
-            }),
-            endTime: new Date(createdReservationWithDetails.date_fin).toLocaleTimeString('fr-FR', { 
-              hour: '2-digit', 
-              minute: '2-digit' 
-            }),
-            motif: createdReservationWithDetails.motif || 'Non spécifié',
-            department: createdReservationWithDetails.department?.name || null
-          }).catch(emailError => {
-            console.error(`⚠️ Erreur envoi email à admin ${admin.email}:`, emailError.message);
-          });
-        }
-
-        // Notifier le responsable de la salle (s'il existe)
+        // Chercher le responsable de la salle
         const salle = await Room.findByPk(room_id, {
           include: [{ model: User, as: 'responsable', attributes: ['id', 'nom', 'prenom', 'email', 'role'] }]
         });
 
         if (salle && salle.responsable && salle.responsable.id) {
-          const resp = salle.responsable;
+          recipientIds.add(salle.responsable.id);
+        } else {
+          // Ajouter tous les responsables globaux si pas de responsable attribué
+          const responsablesGlobal = await User.findAll({ where: { role: { [Op.in]: ['responsable', 'responsable_salle'] } } });
+          for (const r of responsablesGlobal) recipientIds.add(r.id);
+        }
+
+        // Créer une notification unique par destinataire et envoyer emails aux admins seulement
+        for (const userId of recipientIds) {
+          const isResponsible = salle && salle.responsable && salle.responsable.id === userId;
+          const titre = isResponsible ? 'Nouvelle demande de réservation (salle sous votre responsabilité)' : 'Nouvelle demande de réservation';
+
           await Notification.create({
-            user_id: resp.id,
+            user_id: userId,
             type: 'new_reservation',
-            titre: 'Nouvelle demande de réservation (salle sous votre responsabilité)',
-            message: `Nouvelle demande de réservation pour la salle "${salle.nom || 'ID:'+room_id}" le ${date}.`,
+            titre,
+            message: `Nouvelle demande de réservation pour la salle (ID: ${room_id}) le ${date}.`,
             reservation_id: nouvelleReservation.id,
             lu: false
-          });
-          console.log(`✅ Notification créée pour responsable (user ${resp.id})`);
-        } else {
-          // Notifier tous les responsables si pas de responsable attribué
-          const responsablesGlobal = await User.findAll({ where: { role: { [Op.in]: ['responsable', 'responsable_salle'] } } });
-          for (const r of responsablesGlobal) {
-            await Notification.create({
-              user_id: r.id,
-              type: 'new_reservation',
-              titre: 'Nouvelle demande de réservation',
-              message: `Nouvelle demande de réservation pour la salle (ID: ${room_id}) le ${date}.`,
-              reservation_id: nouvelleReservation.id,
-              lu: false
-            }).catch(e => console.warn('⚠️ Erreur notification responsable:', e.message));
+          }).catch(e => console.warn('⚠️ Erreur création notification:', e.message));
+
+          // Envoyer email uniquement si l'utilisateur est un admin (évite doublons email/responsable)
+          try {
+            const user = await User.findByPk(userId);
+            if (user && user.role === 'admin') {
+              emailService.sendNewReservationToAdmins(user.email, {
+                userName: `${createdReservationWithDetails.utilisateur.prenom} ${createdReservationWithDetails.utilisateur.nom}`,
+                userEmail: createdReservationWithDetails.utilisateur.email,
+                roomName: createdReservationWithDetails.salle?.nom || `Salle #${room_id}`,
+                date: new Date(createdReservationWithDetails.date_debut).toLocaleDateString('fr-FR', { 
+                  weekday: 'long', 
+                  year: 'numeric', 
+                  month: 'long', 
+                  day: 'numeric' 
+                }),
+                startTime: new Date(createdReservationWithDetails.date_debut).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }),
+                endTime: new Date(createdReservationWithDetails.date_fin).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }),
+                motif: createdReservationWithDetails.motif || 'Non spécifié',
+                department: createdReservationWithDetails.department?.name || null
+              }).catch(emailError => console.error(`⚠️ Erreur envoi email à ${user.email}:`, emailError && emailError.message ? emailError.message : emailError));
+            }
+          } catch (e) {
+            console.warn('⚠️ Erreur lors de l\'envoi email/lookup utilisateur:', e.message || e);
           }
         }
         console.log("✅ Notifications envoyées en arrière-plan");
