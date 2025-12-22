@@ -19,7 +19,8 @@
     "audit:compose": "node compose-cleaner.js",
     "validate:compose": "node compose-validator.js",
     "ci": "bash ci.sh",
-    "lint:fix": "eslint . --ext .js,.ts --fix"
+    "lint:fix": "eslint . --ext .js,.ts --fix",
+    "release": "npx sequelize-cli db:migrate"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
@@ -46,6 +47,7 @@
     "js-yaml": "^4.1.0",
     "nodemon": "^3.0.1",
     "prettier": "^3.6.2",
+    "sequelize-cli": "^6.6.3",
     "supertest": "^6.3.3"
   },
   "jest": {
