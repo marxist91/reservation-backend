@@ -2,12 +2,12 @@
 
 module.exports = {
   up: async (queryInterface, Sequelize) => {
-    // Cleanup existing duplicate notifications: keep the earliest (min id) per (user_id, reservation_id, type)
+    // Cleanup existing duplicate notifications: keep the most recent (max id) per (user_id, reservation_id, type)
     // Use COALESCE to handle NULL reservation_id values
     await queryInterface.sequelize.query(`
       DELETE n FROM notifications n
       INNER JOIN (
-        SELECT MIN(id) AS keep_id, user_id, COALESCE(reservation_id, 0) AS reservation_id, type
+        SELECT MAX(id) AS keep_id, user_id, COALESCE(reservation_id, 0) AS reservation_id, type
         FROM notifications
         GROUP BY user_id, COALESCE(reservation_id, 0), type
       ) t ON n.user_id = t.user_id
