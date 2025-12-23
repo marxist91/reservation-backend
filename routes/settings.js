@@ -47,12 +47,21 @@ router.put("/", authMiddleware, verifyRole(["admin"]), async (req, res) => {
       });
     }
 
-    // Ne pas permettre la modification de l'ID
-    delete updates.id;
-    delete updates.created_at;
-    delete updates.updated_at;
+    // Filtrer les champs envoyés pour n'inclure que ceux existant dans le modèle Setting
+    const allowedAttrs = Object.keys(Setting.rawAttributes || {}).filter(k => !['id', 'created_at', 'updated_at'].includes(k));
+    const payload = {};
+    for (const key of allowedAttrs) {
+      if (Object.prototype.hasOwnProperty.call(updates, key)) payload[key] = updates[key];
+    }
 
-    const settings = await Setting.updateSettings(updates);
+    if (Object.keys(payload).length === 0) {
+      return safeResponse(res, { message: 'Aucun champ modifiable fourni ou champs non autorisés' }, 400, {
+        action: 'update_settings',
+        userId: req.user?.id
+      });
+    }
+
+    const settings = await Setting.updateSettings(payload);
     console.log('✅ Paramètres mis à jour:', JSON.stringify(settings, null, 2));
     
     // Convertir l'instance Sequelize en objet JSON simple
