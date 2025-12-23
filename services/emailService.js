@@ -12,6 +12,7 @@ class EmailService {
     this.isConfigured = false;
     this.logoBase64 = null;
     this.User = null; // Modèle User pour récupérer les responsables
+    this.Setting = null; // Modèle Setting pour récupérer le réglage
     this.loadLogo();
     this.initializeTransporter();
   }
@@ -23,16 +24,45 @@ class EmailService {
     this.User = UserModel;
   }
 
+  setSettingModel(SettingModel) {
+    this.Setting = SettingModel;
+  }
+
   /**
    * Récupère tous les emails des admins et responsables
    */
-  async getAdminsAndResponsablesEmails() {
+  async getAdminsAndResponsablesEmails(roomId = null) {
     if (!this.User) {
       console.warn('⚠️  Modèle User non initialisé. Impossible de récupérer les responsables.');
       return [];
     }
 
     try {
+      // Charger les settings si disponibles
+      let settings = null;
+      try {
+        if (this.Setting && typeof this.Setting.getSettings === 'function') {
+          settings = await this.Setting.getSettings();
+        }
+      } catch (sErr) {
+        console.warn('⚠️ Impossible de lire les settings:', sErr.message);
+      }
+
+      // Si suppression activée et roomId fourni, tenter de récupérer le responsable de la salle
+      if (settings && settings.suppress_admin_if_responsable_notified && roomId) {
+        try {
+          const { Room, User } = require('../models');
+          const room = await Room.findByPk(roomId, {
+            include: [{ model: User, as: 'responsable', attributes: ['id', 'email'] }]
+          });
+          if (room && room.responsable && room.responsable.email) {
+            return [room.responsable.email];
+          }
+        } catch (err) {
+          console.warn('⚠️ Erreur récupération responsable de salle:', err.message);
+        }
+      }
+
       const users = await this.User.findAll({
         where: {
           role: ['admin', 'responsable'],
@@ -1057,8 +1087,9 @@ class EmailService {
     // Email FYI pour les responsables (informatif)
     const htmlFYI = this.getReservationValidatedFYITemplate(dataTemplate);
 
-    // Envoi aux admins et responsables
-    const adminsEmails = await this.getAdminsAndResponsablesEmails();
+    // Envoi aux admins et responsables (préférer responsables si setting activé)
+    const roomId = reservation.room_id || (reservation.salle && reservation.salle.id) || null;
+    const adminsEmails = await this.getAdminsAndResponsablesEmails(roomId);
     if (adminsEmails.length > 0) {
       await this.sendEmail({
         to: adminsEmails.join(','),
@@ -1108,8 +1139,9 @@ class EmailService {
     // Email FYI pour les responsables (informatif)
     const htmlFYI = this.getReservationRejectedFYITemplate(dataTemplate);
 
-    // Envoi aux admins et responsables
-    const adminsEmails = await this.getAdminsAndResponsablesEmails();
+    // Envoi aux admins et responsables (préférer responsables si setting activé)
+    const roomId = reservation.room_id || (reservation.salle && reservation.salle.id) || null;
+    const adminsEmails = await this.getAdminsAndResponsablesEmails(roomId);
     if (adminsEmails.length > 0) {
       await this.sendEmail({
         to: adminsEmails.join(','),
@@ -1138,8 +1170,9 @@ class EmailService {
     // Email FYI pour les responsables (informatif)
     const htmlFYI = this.getAlternativeProposedFYITemplate(alternativeData);
 
-    // Envoi aux admins et responsables
-    const adminsEmails = await this.getAdminsAndResponsablesEmails();
+    // Envoi aux admins et responsables (préférer responsables si setting activé)
+    const roomId = reservation.room_id || (reservation.salle && reservation.salle.id) || null;
+    const adminsEmails = await this.getAdminsAndResponsablesEmails(roomId);
     if (adminsEmails.length > 0) {
       await this.sendEmail({
         to: adminsEmails.join(','),
@@ -1177,8 +1210,9 @@ class EmailService {
       html,
     });
 
-    // Envoi aux autres admins et responsables
-    const adminsEmails = await this.getAdminsAndResponsablesEmails();
+    // Envoi aux autres admins et responsables (préférer responsables si setting activé)
+    const roomId = alternativeData.room_id || (alternativeData.salle && alternativeData.salle.id) || null;
+    const adminsEmails = await this.getAdminsAndResponsablesEmails(roomId);
     const otherAdmins = adminsEmails.filter(email => email !== proposerEmail);
     if (otherAdmins.length > 0) {
       await this.sendEmail({

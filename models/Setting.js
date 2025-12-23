@@ -93,6 +93,12 @@ module.exports = (sequelize, DataTypes) => {
         allowNull: false,
         defaultValue: true
       },
+      // Si true: n'envoie pas d'alertes aux admins quand le responsable de la salle a déjà été notifié
+      suppress_admin_if_responsable_notified: {
+        type: DataTypes.BOOLEAN,
+        allowNull: false,
+        defaultValue: true
+      },
       reminder_before_hours: {
         type: DataTypes.INTEGER,
         allowNull: false,

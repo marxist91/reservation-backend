@@ -347,8 +347,9 @@ if (process.env.NODE_ENV !== 'test') {
       // Initialiser le service email avec le modèle User
       console.log("📧 Initialisation du service email...");
       const emailService = require('./services/emailService');
-      const { User } = require('./models');
+      const { User, Setting } = require('./models');
       emailService.setUserModel(User);
+      emailService.setSettingModel(Setting);
       console.log("✅ Service email configuré avec le modèle User");
       
       // Démarrer le scheduler d'annulation automatique
