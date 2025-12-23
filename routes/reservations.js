@@ -883,6 +883,10 @@ router.post("/create", authMiddleware, verifyMinimumRole("user"), async (req, re
     setImmediate(async () => {
       try {
         // Notifier les admins / responsables (dédupliquer les destinataires)
+        // Respecter le setting `suppress_admin_if_responsable_notified`
+        const { Setting } = require('../models');
+        let settings = null;
+        try { settings = await Setting.getSettings(); } catch(e){ console.warn('⚠️ Impossible de lire settings:', e && e.message); }
         const admins = await User.findAll({ where: { role: 'admin' } });
         const createdReservationWithDetails = await Reservation.findByPk(nouvelleReservation.id, {
           include: [
@@ -894,20 +898,24 @@ router.post("/create", authMiddleware, verifyMinimumRole("user"), async (req, re
         // Rassembler les destinataires (IDs) et dédupliquer
         const recipientIds = new Set();
 
-        // Ajouter admins
-        for (const admin of admins) recipientIds.add(admin.id);
-
+        // Ajouter admins (sauf si suppression activée et salle a un responsable)
         // Chercher le responsable de la salle
         const salle = await Room.findByPk(room_id, {
           include: [{ model: User, as: 'responsable', attributes: ['id', 'nom', 'prenom', 'email', 'role'] }]
         });
 
         if (salle && salle.responsable && salle.responsable.id) {
+          // si suppression activée, n'ajoute pas les admins
+          if (!(settings && settings.suppress_admin_if_responsable_notified)) {
+            for (const admin of admins) recipientIds.add(admin.id);
+          }
           recipientIds.add(salle.responsable.id);
         } else {
           // Ajouter tous les responsables globaux si pas de responsable attribué
           const responsablesGlobal = await User.findAll({ where: { role: { [Op.in]: ['responsable', 'responsable_salle'] } } });
           for (const r of responsablesGlobal) recipientIds.add(r.id);
+          // si pas de responsable, on notifie aussi les admins
+          for (const admin of admins) recipientIds.add(admin.id);
         }
 
         // Créer une notification unique par destinataire et envoyer emails aux admins seulement
@@ -1637,26 +1645,63 @@ router.post("/create-multiple", authMiddleware, async (req, res) => {
     }, { transaction: t });
 
     // Notification pour les admins (ceux qui ont le rôle 'admin' ou 'responsable')
-    // On récupère les admins
-    const admins = await User.findAll({
-      where: {
-        role: { [Op.in]: ['admin', 'responsable'] }
-      },
-      attributes: ['id', 'email'],
-      transaction: t
-    });
+    // Respecter le setting `suppress_admin_if_responsable_notified` si activé
+    const { Setting, Room } = require('../models');
+    let admins = [];
+    let settings = null;
+    try {
+      settings = await Setting.getSettings();
+    } catch (sErr) {
+      console.warn('⚠️ Impossible de lire les settings:', sErr && sErr.message);
+    }
 
-    // Création des notifications pour les admins
-    const adminNotifications = admins.map(admin => ({
-      user_id: admin.id,
-      type: 'admin_new_reservation_group',
-      titre: 'Nouvelle demande de réservation multiple',
-      message: `Une nouvelle demande de réservation multiple (${createdReservations.length} créneaux) a été créée par l'utilisateur ${userId}.`,
-      reservation_id: createdReservations[0].id
-    }));
+    // Si suppression activée et que la salle a un responsable, notifier uniquement le responsable
+    let notifiedAdminIds = [];
+    if (settings && settings.suppress_admin_if_responsable_notified) {
+      try {
+        const room = await Room.findByPk(room_id, {
+          include: [{ model: User, as: 'responsable', attributes: ['id', 'email'] }],
+          transaction: t
+        });
+        if (room && room.responsable && room.responsable.id) {
+          // Créer une notification seulement pour le responsable
+          await Notification.create({
+            user_id: room.responsable.id,
+            type: 'admin_new_reservation_group',
+            titre: 'Nouvelle demande de réservation multiple',
+            message: `Une nouvelle demande de réservation multiple (${createdReservations.length} créneaux) a été créée par l'utilisateur ${userId}.`,
+            reservation_id: createdReservations[0].id
+          }, { transaction: t });
+          notifiedAdminIds.push(room.responsable.id);
+        }
+      } catch (err) {
+        console.warn('⚠️ Erreur récupération responsable pour suppression admin:', err && err.message);
+      }
+    }
 
-    if (adminNotifications.length > 0) {
-      await Notification.bulkCreate(adminNotifications, { transaction: t });
+    // Si on n'a pas encore notifié quelqu'un (ou suppression non activée), notifier tous les admins/responsables
+    if (notifiedAdminIds.length === 0) {
+      admins = await User.findAll({
+        where: { role: { [Op.in]: ['admin', 'responsable'] } },
+        attributes: ['id', 'email', 'prenom', 'nom'],
+        transaction: t
+      });
+
+      const adminNotifications = admins.map(admin => ({
+        user_id: admin.id,
+        type: 'admin_new_reservation_group',
+        titre: 'Nouvelle demande de réservation multiple',
+        message: `Une nouvelle demande de réservation multiple (${createdReservations.length} créneaux) a été créée par l'utilisateur ${userId}.`,
+        reservation_id: createdReservations[0].id
+      }));
+
+      if (adminNotifications.length > 0) {
+        await Notification.bulkCreate(adminNotifications, { transaction: t });
+        notifiedAdminIds = admins.map(a => a.id);
+      }
+    } else {
+      // si on a notifié uniquement le responsable, charger ses infos pour l'envoi d'email
+      admins = await User.findAll({ where: { id: notifiedAdminIds }, attributes: ['id', 'email', 'prenom', 'nom'], transaction: t });
     }
 
     // Envoi d'emails (hors transaction pour ne pas bloquer)
@@ -1692,24 +1737,23 @@ router.post("/create-multiple", authMiddleware, async (req, res) => {
                 `
             }).catch(err => console.error("Erreur envoi email user:", err));
 
-            // Envoi email aux admins
-            for (const admin of admins) {
-                if (admin.email) {
-                    sendEmail({
-                        to: admin.email,
-                        subject: 'Nouvelle demande de réservation multiple',
-                        html: `
-                            <h1>Nouvelle demande à valider</h1>
-                            <p>L'utilisateur ${user.prenom} ${user.nom} a fait une demande de réservation multiple.</p>
-                            <p><strong>Détails :</strong></p>
-                            <ul>
-                                <li>Nombre de créneaux : ${createdReservations.length}</li>
-                                <li>Salle ID : ${room_id}</li>
-                            </ul>
-                            <p>Merci de vous connecter pour valider ou refuser.</p>
-                        `
-                    }).catch(err => console.error("Erreur envoi email admin:", err));
-                }
+            // Envoi email aux admins (déduplication par email)
+            const adminEmails = Array.from(new Set(admins.map(a => a.email).filter(e => e)));
+            for (const email of adminEmails) {
+              sendEmail({
+                to: email,
+                subject: 'Nouvelle demande de réservation multiple',
+                html: `
+                  <h1>Nouvelle demande à valider</h1>
+                  <p>L'utilisateur ${user.prenom} ${user.nom} a fait une demande de réservation multiple.</p>
+                  <p><strong>Détails :</strong></p>
+                  <ul>
+                    <li>Nombre de créneaux : ${createdReservations.length}</li>
+                    <li>Salle ID : ${room_id}</li>
+                  </ul>
+                  <p>Merci de vous connecter pour valider ou refuser.</p>
+                `
+              }).catch(err => console.error("Erreur envoi email admin:", err));
             }
         }
     } catch (emailError) {
