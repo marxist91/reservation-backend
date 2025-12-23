@@ -79,4 +79,34 @@ router.put("/", authMiddleware, verifyRole(["admin"]), async (req, res) => {
   }
 });
 
+// PATCH /api/settings/suppress-admin - activer/désactiver la suppression des notifications admins
+router.patch("/suppress-admin", authMiddleware, verifyRole(["admin"]), async (req, res) => {
+  try {
+    const { suppress_admin_if_responsable_notified } = req.body;
+
+    if (typeof suppress_admin_if_responsable_notified !== 'boolean') {
+      return safeResponse(res, { message: 'Le champ suppress_admin_if_responsable_notified doit être un booléen' }, 400, {
+        action: 'update_suppress_admin',
+        userId: req.user?.id
+      });
+    }
+
+    const settings = await Setting.updateSettings({ suppress_admin_if_responsable_notified });
+    const settingsData = settings.toJSON();
+
+    return safeResponse(res, { message: 'Paramètre mis à jour', settings: settingsData }, 200, {
+      action: 'update_suppress_admin',
+      userId: req.user?.id,
+      newValue: suppress_admin_if_responsable_notified
+    });
+  } catch (error) {
+    console.error('❌ Erreur update suppress-admin:', error);
+    return safeResponse(res, { message: 'Erreur mise à jour paramètre', error: error.message }, 500, {
+      action: 'update_suppress_admin',
+      userId: req.user?.id,
+      errorMessage: error.message
+    });
+  }
+});
 module.exports = router;
+
