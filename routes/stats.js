@@ -244,4 +244,217 @@ router.get('/overview', authMiddleware, async (req, res) => {
   }
 });
 
+// GET /api/stats/weekly-report
+// Rapport hebdomadaire/mensuel pour les réunions des directeurs
+// Accepte des paramètres optionnels: startDate, endDate, type (week/month)
+router.get('/weekly-report', authMiddleware, async (req, res) => {
+  try {
+    const { startDate: queryStart, endDate: queryEnd, type = 'week' } = req.query;
+    
+    let lastWeekStart, lastWeekEnd, prevWeekStart, prevWeekEnd;
+    
+    if (queryStart && queryEnd) {
+      // Utiliser les dates fournies
+      lastWeekStart = queryStart;
+      lastWeekEnd = queryEnd;
+      
+      // Calculer la période précédente équivalente
+      const start = new Date(queryStart);
+      const end = new Date(queryEnd);
+      const diffDays = Math.ceil((end - start) / (1000 * 60 * 60 * 24)) + 1;
+      
+      const prevEnd = new Date(start);
+      prevEnd.setDate(prevEnd.getDate() - 1);
+      const prevStart = new Date(prevEnd);
+      prevStart.setDate(prevStart.getDate() - diffDays + 1);
+      
+      prevWeekStart = prevStart.toISOString().slice(0, 10);
+      prevWeekEnd = prevEnd.toISOString().slice(0, 10);
+    } else if (type === 'month') {
+      // Mois précédent
+      const now = new Date();
+      const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      const lastMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0);
+      
+      lastWeekStart = lastMonth.toISOString().slice(0, 10);
+      lastWeekEnd = lastMonthEnd.toISOString().slice(0, 10);
+      
+      // Mois d'avant
+      const prevMonth = new Date(now.getFullYear(), now.getMonth() - 2, 1);
+      const prevMonthEnd = new Date(now.getFullYear(), now.getMonth() - 1, 0);
+      
+      prevWeekStart = prevMonth.toISOString().slice(0, 10);
+      prevWeekEnd = prevMonthEnd.toISOString().slice(0, 10);
+    } else {
+      // Calculer les dates de la semaine passée (lundi à dimanche) - comportement par défaut
+      const now = new Date();
+      const dayOfWeek = now.getDay();
+      const diffToLastMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+      
+      // Semaine actuelle (en cours)
+      const thisMonday = new Date(now);
+      thisMonday.setDate(now.getDate() - diffToLastMonday);
+      thisMonday.setHours(0, 0, 0, 0);
+      
+      // Semaine passée (celle qu'on rapporte)
+      const lastMonday = new Date(thisMonday);
+      lastMonday.setDate(thisMonday.getDate() - 7);
+      const lastSunday = new Date(thisMonday);
+      lastSunday.setDate(thisMonday.getDate() - 1);
+      lastSunday.setHours(23, 59, 59, 999);
+      
+      // Semaine d'avant (pour comparaison)
+      const prevMonday = new Date(lastMonday);
+      prevMonday.setDate(lastMonday.getDate() - 7);
+      const prevSunday = new Date(lastMonday);
+      prevSunday.setDate(lastMonday.getDate() - 1);
+      
+      const formatDate = (d) => d.toISOString().slice(0, 10);
+      lastWeekStart = formatDate(lastMonday);
+      lastWeekEnd = formatDate(lastSunday);
+      prevWeekStart = formatDate(prevMonday);
+      prevWeekEnd = formatDate(prevSunday);
+    }
+
+    // 1. KPIs de la semaine passée (basé sur date_debut = date de la réservation)
+    const kpiQuery = `
+      SELECT
+        COUNT(*) AS total,
+        SUM(CASE WHEN r.statut IN ('confirmee','validee') THEN 1 ELSE 0 END) AS confirmed,
+        SUM(CASE WHEN r.statut = 'en_attente' THEN 1 ELSE 0 END) AS pending,
+        SUM(CASE WHEN r.statut IN ('rejetee','refusee','annulee') THEN 1 ELSE 0 END) AS rejected
+      FROM reservations r
+      WHERE DATE(r.date_debut) BETWEEN :startDate AND :endDate
+    `;
+
+    const [lastWeekKpis] = await sequelize.query(kpiQuery, { 
+      replacements: { startDate: lastWeekStart, endDate: lastWeekEnd }, 
+      type: Sequelize.QueryTypes.SELECT 
+    });
+
+    const [prevWeekKpis] = await sequelize.query(kpiQuery, { 
+      replacements: { startDate: prevWeekStart, endDate: prevWeekEnd }, 
+      type: Sequelize.QueryTypes.SELECT 
+    });
+
+    // Calculer l'évolution en pourcentage
+    const calcEvolution = (current, previous) => {
+      const curr = Number(current) || 0;
+      const prev = Number(previous) || 0;
+      if (prev === 0) return curr > 0 ? 100 : 0;
+      return ((curr - prev) / prev * 100).toFixed(1);
+    };
+
+    // 2. Top 5 salles les plus réservées
+    const topSallesQuery = `
+      SELECT rm.id, rm.nom, COUNT(r.id) AS reservations,
+        SUM(CASE WHEN r.statut IN ('confirmee','validee') THEN 1 ELSE 0 END) AS confirmees,
+        SUM(CASE WHEN r.statut = 'en_attente' THEN 1 ELSE 0 END) AS en_attente,
+        SUM(CASE WHEN r.statut IN ('rejetee','refusee','annulee') THEN 1 ELSE 0 END) AS rejetees
+      FROM reservations r
+      LEFT JOIN rooms rm ON r.room_id = rm.id
+      WHERE DATE(r.date_debut) BETWEEN :startDate AND :endDate
+      GROUP BY rm.id, rm.nom
+      ORDER BY reservations DESC
+      LIMIT 5
+    `;
+    const topSalles = await sequelize.query(topSallesQuery, { 
+      replacements: { startDate: lastWeekStart, endDate: lastWeekEnd }, 
+      type: Sequelize.QueryTypes.SELECT 
+    });
+
+    // 3. Top 5 départements les plus actifs
+    const topDeptQuery = `
+      SELECT d.id, COALESCE(d.name, 'Non renseigné') AS name, COUNT(r.id) AS reservations,
+        SUM(CASE WHEN r.statut IN ('confirmee','validee') THEN 1 ELSE 0 END) AS confirmees
+      FROM reservations r
+      LEFT JOIN departments d ON r.department_id = d.id
+      WHERE DATE(r.date_debut) BETWEEN :startDate AND :endDate
+      GROUP BY d.id, d.name
+      ORDER BY reservations DESC
+      LIMIT 5
+    `;
+    const topDepartments = await sequelize.query(topDeptQuery, { 
+      replacements: { startDate: lastWeekStart, endDate: lastWeekEnd }, 
+      type: Sequelize.QueryTypes.SELECT 
+    });
+
+    // 4. Évolution jour par jour de la semaine
+    const dailyQuery = `
+      SELECT 
+        DATE(r.date_debut) AS date,
+        DAYNAME(r.date_debut) AS jour,
+        COUNT(*) AS total,
+        SUM(CASE WHEN r.statut IN ('confirmee','validee') THEN 1 ELSE 0 END) AS confirmees,
+        SUM(CASE WHEN r.statut = 'en_attente' THEN 1 ELSE 0 END) AS en_attente,
+        SUM(CASE WHEN r.statut IN ('rejetee','refusee','annulee') THEN 1 ELSE 0 END) AS rejetees
+      FROM reservations r
+      WHERE DATE(r.date_debut) BETWEEN :startDate AND :endDate
+      GROUP BY DATE(r.date_debut), DAYNAME(r.date_debut)
+      ORDER BY DATE(r.date_debut) ASC
+    `;
+    const dailyStats = await sequelize.query(dailyQuery, { 
+      replacements: { startDate: lastWeekStart, endDate: lastWeekEnd }, 
+      type: Sequelize.QueryTypes.SELECT 
+    });
+
+    // 5. Liste détaillée des réservations de la semaine
+    const reservationsQuery = `
+      SELECT 
+        r.id,
+        r.motif,
+        r.statut,
+        DATE_FORMAT(r.date_debut, '%Y-%m-%d') AS date,
+        DATE_FORMAT(r.date_debut, '%H:%i') AS heure_debut,
+        DATE_FORMAT(r.date_fin, '%H:%i') AS heure_fin,
+        rm.nom AS salle,
+        CONCAT(u.prenom, ' ', u.nom) AS demandeur,
+        d.name AS departement,
+        DATE_FORMAT(r.createdAt, '%Y-%m-%d %H:%i') AS date_demande
+      FROM reservations r
+      LEFT JOIN rooms rm ON r.room_id = rm.id
+      LEFT JOIN users u ON r.user_id = u.id
+      LEFT JOIN departments d ON r.department_id = d.id
+      WHERE DATE(r.date_debut) BETWEEN :startDate AND :endDate
+      ORDER BY r.date_debut ASC
+    `;
+    const reservations = await sequelize.query(reservationsQuery, { 
+      replacements: { startDate: lastWeekStart, endDate: lastWeekEnd }, 
+      type: Sequelize.QueryTypes.SELECT 
+    });
+
+    // Construire le rapport
+    const report = {
+      periode: {
+        debut: lastWeekStart,
+        fin: lastWeekEnd,
+        semainePrecedente: { debut: prevWeekStart, fin: prevWeekEnd }
+      },
+      resume: {
+        total: Number(lastWeekKpis?.total) || 0,
+        confirmees: Number(lastWeekKpis?.confirmed) || 0,
+        en_attente: Number(lastWeekKpis?.pending) || 0,
+        rejetees: Number(lastWeekKpis?.rejected) || 0,
+        tauxValidation: lastWeekKpis?.total > 0 
+          ? ((Number(lastWeekKpis?.confirmed) / Number(lastWeekKpis?.total)) * 100).toFixed(1) 
+          : '0',
+      },
+      evolution: {
+        total: calcEvolution(lastWeekKpis?.total, prevWeekKpis?.total),
+        confirmees: calcEvolution(lastWeekKpis?.confirmed, prevWeekKpis?.confirmed),
+      },
+      topSalles,
+      topDepartments,
+      dailyStats,
+      reservations,
+      generatedAt: new Date().toISOString()
+    };
+
+    return res.json(report);
+  } catch (error) {
+    console.error('Erreur GET /api/stats/weekly-report:', error);
+    return res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
 module.exports = router;

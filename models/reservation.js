@@ -26,6 +26,14 @@ module.exports = (sequelize, DataTypes) => {
           as: 'department'
         });
       }
+
+      // Lien vers la réunion récurrente (si présent)
+      if (models.RecurringMeeting) {
+        Reservation.belongsTo(models.RecurringMeeting, {
+          foreignKey: 'recurring_meeting_id',
+          as: 'recurringMeeting'
+        });
+      }
     }
   }
 
@@ -115,6 +123,11 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.STRING(36),
       allowNull: true,
       comment: "UUID pour regrouper les réservations multiples"
+    },
+    recurring_meeting_id: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      comment: "ID de la réunion récurrente associée"
     },
     date: {
       type: DataTypes.VIRTUAL,

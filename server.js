@@ -298,6 +298,26 @@ try {
   console.warn("⚠️ Route alternatives non trouvée ou erreur au chargement:", error.message);
 }
 
+// Routes support (signalement de problèmes)
+try {
+  console.log("🔄 Chargement routes support...");
+  const supportRoutes = require('./routes/support');
+  app.use('/api/support', supportRoutes);
+  console.log("✅ Support monté sur /api/support");
+} catch (error) {
+  console.warn("⚠️ Route support non trouvée ou erreur au chargement:", error.message);
+}
+
+// Routes réunions récurrentes
+try {
+  console.log("🔄 Chargement routes réunions récurrentes...");
+  const recurringMeetingsRoutes = require('./routes/recurringMeetings');
+  app.use('/api/recurring-meetings', recurringMeetingsRoutes);
+  console.log("✅ Réunions récurrentes monté sur /api/recurring-meetings");
+} catch (error) {
+  console.warn("⚠️ Route recurring-meetings non trouvée ou erreur au chargement:", error.message);
+}
+
 console.log("🎉 Toutes les routes chargées");
 
 // ========================================

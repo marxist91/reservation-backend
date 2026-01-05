@@ -2,7 +2,7 @@
 
 // Fonction qui sera appelée après l'initialisation des modèles
 const setupAssociations = (models) => {
-  const { User, Room, Reservation, AuditLog, Department, ProposedAlternative } = models;
+  const { User, Room, Reservation, AuditLog, Department, ProposedAlternative, SupportTicket, RecurringMeeting } = models;
 
   // ⚠️ IMPORTANT : Les associations principales sont déjà définies dans les modèles individuels
   // On ajoute seulement l'association AuditLog -> User qui n'est pas définie ailleurs
@@ -13,6 +13,28 @@ const setupAssociations = (models) => {
     as: 'auteur', // Alias unique pour éviter les conflits
     constraints: false // Permet les valeurs nulles pour les actions système
   });
+
+  // Association entre SupportTicket et User
+  if (SupportTicket) {
+    SupportTicket.belongsTo(User, {
+      foreignKey: 'user_id',
+      as: 'user',
+      constraints: false
+    });
+    User.hasMany(SupportTicket, {
+      foreignKey: 'user_id',
+      as: 'tickets'
+    });
+  }
+
+  // Association entre RecurringMeeting et ses réservations
+  if (RecurringMeeting) {
+    // hasMany Reservation est le seul qui n'est pas défini ailleurs
+    RecurringMeeting.hasMany(Reservation, {
+      foreignKey: 'recurring_meeting_id',
+      as: 'reservations'
+    });
+  }
 
   // Note: ProposedAlternative.associate() est déjà appelé automatiquement par models/index.js
   // Pas besoin de l'appeler ici pour éviter les associations en double

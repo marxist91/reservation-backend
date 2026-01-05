@@ -11,29 +11,16 @@ const autoAudit = require("../middlewares/autoAudit");
 const { Notification } = require("../models");
 const ACTIONS = require("../constants/actions");
 
-// GET /api/notifications (Liste des notifications - Admin/Responsable voient demandes + leurs propres, User voit les siennes)
+// GET /api/notifications (Liste des notifications - Chaque utilisateur voit uniquement SES notifications)
 router.get("/", authMiddleware, verifyRole(ROLES_NOTIFICATION_VIEW), async (req, res) => {
   try {
     const userId = req.user.id;
     const userRole = req.user.role;
-    const { Op } = require('sequelize');
     
-    let whereClause = { user_id: userId };
-    
-    // Admin et responsables voient:
-    // 1. Leurs propres notifications
-    // 2. Les notifications de type "demande" (nouvelles réservations à traiter)
-    if (userRole === 'admin' || userRole === 'responsable' || userRole === 'responsable_salle') {
-      // Types de notifications globales pour admins/responsables
-      const globalTypes = ['new_reservation', 'reservation_pending', 'reservation_cancelled'];
-      
-      whereClause = {
-        [Op.or]: [
-          { user_id: userId }, // Leurs propres notifications
-          { type: { [Op.in]: globalTypes } } // Notifications de demandes
-        ]
-      };
-    }
+    // Chaque utilisateur (y compris admin) voit uniquement les notifications qui lui sont destinées
+    // La logique de qui reçoit quelles notifications est gérée à la CRÉATION (routes/reservations.js)
+    // Le setting `suppress_admin_if_responsable_notified` contrôle si les admins reçoivent des notifications
+    const whereClause = { user_id: userId };
     
     const notifications = await Notification.findAll({
       where: whereClause,
