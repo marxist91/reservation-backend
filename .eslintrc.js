@@ -6,22 +6,16 @@ module.exports = {
     es2021: true,
     jest: true,
   },
-  parser: '@typescript-eslint/parser',
   parserOptions: {
     ecmaVersion: 'latest',
-    sourceType: 'module',
+    sourceType: 'script', // CommonJS (require) instead of ES modules (import)
   },
-  plugins: ['@typescript-eslint'],
   extends: [
     'eslint:recommended',
-    'plugin:@typescript-eslint/recommended',
-    'prettier'
   ],
   rules: {
-    'no-console': 'warn',
+    'no-console': 'off', // Allow console in Node.js backend
     'no-unused-vars': ['warn', { argsIgnorePattern: '^_' }],
-    '@typescript-eslint/no-explicit-any': 'off',
-    '@typescript-eslint/explicit-module-boundary-types': 'off'
   },
 ignorePatterns: [
   'node_modules/',
