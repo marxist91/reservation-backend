@@ -139,14 +139,14 @@ if (process.env.NODE_ENV !== 'test') {
 module.exports = app;
 */
 
-import dotenv from 'dotenv';
-import express from 'express';
-import cors from 'cors';
-import morgan from 'morgan';
-import rateLimit from 'express-rate-limit';
-import helmet from 'helmet';
-import fs from 'fs';
-import path from 'path';
+const dotenv = require('dotenv');
+const express = require('express');
+const cors = require('cors');
+const morgan = require('morgan');
+const rateLimit = require('express-rate-limit');
+const helmet = require('helmet');
+const fs = require('fs');
+const path = require('path');
 
 dotenv.config();
 
