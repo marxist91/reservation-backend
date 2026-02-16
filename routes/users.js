@@ -4,13 +4,82 @@ const verifyMinimumRole = require("../middlewares/verifyMinimumRole");
 const verifyRole = require("../middlewares/verifyRole");
 const express = require("express");
 const router = express.Router();
-const { Reservation, User } = require("../models");
+const { Reservation, User, Room, Department, AuditLog, Notification, SupportTicket, RecurringMeeting } = require("../models");
 const authMiddleware = require("../middlewares/authMiddleware");
 const { horairesValides, dureeMinimale } = require("../utils/validations");
 const autoAudit = require("../middlewares/autoAudit");
 const {ROLES_USER_UPDATE} = require("../constants/permissions");
 const { UPDATE_USER } = require("../constants/actions"); // "UPDATE_USER"
 const safeResponse = require("../utils/safeResponse");
+
+// Suppression complète d’un utilisateur et toutes ses dépendances (admin)
+router.delete("/:id/full", authMiddleware, verifyRole(["admin"]), async (req, res) => {
+  const { id } = req.params;
+  try {
+    const user = await User.findByPk(id);
+    if (!user) {
+      return res.status(404).json({ error: "Utilisateur introuvable" });
+    }
+    // Suppression des réservations
+    await Reservation.destroy({ where: { user_id: id } });
+    // Suppression des salles
+    if (user.role === "responsable") {
+      await Room.destroy({ where: { responsable_id: id } });
+    }
+    // Suppression des départements
+    if (user.role === "responsable") {
+      await Department.destroy({ where: { responsable_id: id } });
+    }
+    // Suppression des logs d’audit
+    await AuditLog.destroy({ where: { user_id: id } });
+    // Suppression des notifications
+    if (Notification) {
+      await Notification.destroy({ where: { user_id: id } });
+    }
+    // Suppression des tickets support
+    if (SupportTicket) {
+      await SupportTicket.destroy({ where: { user_id: id } });
+    }
+    // Suppression des réunions récurrentes
+    if (RecurringMeeting) {
+      await RecurringMeeting.destroy({ where: { responsable_id: id } });
+    }
+    // Enfin, suppression du user
+    await user.destroy();
+    return res.json({ success: true, message: "Utilisateur et toutes ses données liées supprimés" });
+  } catch (error) {
+    console.error("Erreur suppression complète utilisateur:", error);
+    return res.status(500).json({ error: "Erreur lors de la suppression complète de l'utilisateur" });
+  }
+});
+
+
+//const { Reservation, User } = require("../models");
+//const authMiddleware = require("../middlewares/authMiddleware");
+//const { horairesValides, dureeMinimale } = require("../utils/validations");
+//const autoAudit = require("../middlewares/autoAudit");
+
+
+// Suppression d’un utilisateur (admin)
+router.delete("/:id", authMiddleware, verifyRole(["admin"]), async (req, res) => {
+  const { id } = req.params;
+  try {
+    const user = await User.findByPk(id);
+    if (!user) {
+      return res.status(404).json({ error: "Utilisateur introuvable" });
+    }
+    // Supprimer toutes les notifications liées à cet utilisateur
+    if (Notification) {
+      await Notification.destroy({ where: { user_id: id } });
+    }
+    // (Optionnel) Supprimer d'autres dépendances si besoin ici
+    await user.destroy();
+    return res.json({ success: true, message: "Utilisateur supprimé" });
+  } catch (error) {
+    console.error("Erreur suppression utilisateur:", error);
+    return res.status(500).json({ error: "Erreur lors de la suppression de l'utilisateur" });
+  }
+});
 
 // Désactiver ou réactiver un utilisateur (admin)
 router.put("/:id/actif", authMiddleware, verifyRole(["admin"]), async (req, res) => {
