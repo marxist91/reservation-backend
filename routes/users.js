@@ -1,17 +1,37 @@
+
+const { Op } = require("sequelize");
+const verifyMinimumRole = require("../middlewares/verifyMinimumRole");
+const verifyRole = require("../middlewares/verifyRole");
 const express = require("express");
 const router = express.Router();
-const { Reservation, User, Room } = require("../models");
-const { Op } = require("sequelize");
-
+const { Reservation, User } = require("../models");
 const authMiddleware = require("../middlewares/authMiddleware");
-const verifyRole = require("../middlewares/verifyRole");
-const verifyMinimumRole = require("../middlewares/verifyMinimumRole");
-
 const { horairesValides, dureeMinimale } = require("../utils/validations");
 const autoAudit = require("../middlewares/autoAudit");
-const {RESERVATION_STATUTS,ROLES_RESERVATION_VALIDATION,ROLES_USER_UPDATE} = require("../constants/permissions");
+const {ROLES_USER_UPDATE} = require("../constants/permissions");
 const { UPDATE_USER } = require("../constants/actions"); // "UPDATE_USER"
 const safeResponse = require("../utils/safeResponse");
+
+// Désactiver ou réactiver un utilisateur (admin)
+router.put("/:id/actif", authMiddleware, verifyRole(["admin"]), async (req, res) => {
+  const { id } = req.params;
+  const { actif } = req.body;
+  if (typeof actif !== "boolean") {
+    return res.status(400).json({ error: "Le champ 'actif' doit être un booléen." });
+  }
+  try {
+    const user = await User.findByPk(id);
+    if (!user) {
+      return res.status(404).json({ error: "Utilisateur introuvable" });
+    }
+    user.actif = actif;
+    await user.save();
+    return res.json({ success: true, id: user.id, actif: user.actif });
+  } catch (error) {
+    console.error("Erreur désactivation utilisateur:", error);
+    return res.status(500).json({ error: "Erreur lors de la désactivation" });
+  }
+});
 
 // 🔹 GET /api/reservations : Vue filtrée + pagination
 
@@ -19,26 +39,33 @@ const safeResponse = require("../utils/safeResponse");
 
 router.get("/registry", authMiddleware, verifyRole(["admin"]), async (req, res) => {
   const { role, email, nom, limit, offset } = req.query;
-
+  // Construction du filtre dynamique pour la recherche
   const filtre = {};
   if (role) filtre.role = role;
-  if (email) filtre.email = email;
-  if (nom) filtre.nom = { [Op.like]: `%${nom}%` };
+  if (email) filtre.email = { [Op.like]: `%${email}%` };
+  if (nom) {
+    // Recherche sur nom OU prénom OU email (fréquent en admin)
+    filtre[Op.or] = [
+      { nom: { [Op.like]: `%${nom}%` } },
+      { prenom: { [Op.like]: `%${nom}%` } },
+      { email: { [Op.like]: `%${nom}%` } }
+    ];
+  }
 
   try {
-    const pagination = {
-      limit: parseInt(limit) || 10,
-      offset: parseInt(offset) || 0
-    };
+    // Pagination sécurisée
+    const pageLimit = Math.max(1, Math.min(parseInt(limit) || 10, 100));
+    const pageOffset = Math.max(0, parseInt(offset) || 0);
 
+    // Compter le total filtré
     const total = await User.count({ where: filtre });
-
+    // Récupérer les utilisateurs paginés
     const utilisateurs = await User.findAll({
       where: filtre,
       attributes: ["id", "nom", "prenom", "email", "role", "telephone", "actif", "createdAt", "updatedAt"],
       order: [["nom", "ASC"]],
-      limit: pagination.limit,
-      offset: pagination.offset
+      limit: pageLimit,
+      offset: pageOffset
     });
 
     // Mapper les noms de champs Sequelize vers le format attendu par le frontend
@@ -57,23 +84,17 @@ router.get("/registry", authMiddleware, verifyRole(["admin"]), async (req, res) 
     return safeResponse(res, {
       total,
       count: utilisateurs.length,
-      offset: pagination.offset,
-      limit: pagination.limit,
+      offset: pageOffset,
+      limit: pageLimit,
       utilisateurs: formattedUsers
     }, 200, {
-      endpoint: "/api/users/list",
+      endpoint: "/api/users/registry",
       user: req.user?.email,
       ip: req.ip
     });
-
   } catch (error) {
-    console.error("❌ Erreur filtre paginé :", error);
-
-    return safeResponse(res, { error: "Erreur serveur" }, 500, {
-      endpoint: "/api/users/list",
-      user: req.user?.email,
-      ip: req.ip
-    });
+    console.error("Erreur /registry:", error);
+    return res.status(500).json({ error: "Erreur lors de la récupération des utilisateurs" });
   }
 });
 // 🔹 POST /api/reservations : Création sécurisée avec hiérarchie de rôles
@@ -142,64 +163,64 @@ router.post("/register", authMiddleware, verifyMinimumRole("utilisateur"), async
 
 router.put("/update/:userId", authMiddleware,autoAudit({ action: UPDATE_USER, cibleType: "User" }), verifyRole(ROLES_USER_UPDATE),async (req, res) => {
     const { userId } = req.params;
-    const { nom, email, role } = req.body;
-
-    try {
-      const user = await User.findByPk(userId);
-      if (!user) {
-        return res.status(404).json({ error: "📛 Utilisateur introuvable" });
-      }
-
-      req.auditSnapshot = user.toJSON(); // 🧠 état avant modif
-
-      if (nom) user.nom = nom;
-      if (email) user.email = email;
-      if (role) user.role = role;
-
-      await user.save();
-
-      return res.json({ success: true, updated: user }); // ✅ capté par autoAudit
-    } catch (error) {
-      console.error("❌ Erreur PUT /users/update/:userId :", error);
-      return res.status(500).json({ error: "Erreur serveur" });
-    }
-  }
-);
-
-
-// 🔧 PUT /api/reservations/:id : Mise à jour du statut
-router.put( "/update/:userId",authMiddleware,autoAudit({ action: "UPDATE_RESERVATION", cibleType: "Reservation" }),verifyRole(ROLES_RESERVATION_VALIDATION),async (req, res) => {
-    const { userId } = req.params;
-    const { statut } = req.body;
-
-    if (!RESERVATION_STATUTS.includes(statut)) {
-      return res.status(400).json({
-        error: `⛔ Statut invalide. Autorisés : ${RESERVATION_STATUTS.join(", ")}`
-      });
+    const { role, email, nom, limit, offset } = req.query;
+    // Construction du filtre dynamique pour la recherche
+    const filtre = {};
+    if (role) filtre.role = role;
+    if (email) filtre.email = { [Op.like]: `%${email}%` };
+    if (nom) {
+      // Recherche sur nom OU prénom OU email (fréquent en admin)
+      filtre[Op.or] = [
+        { nom: { [Op.like]: `%${nom}%` } },
+        { prenom: { [Op.like]: `%${nom}%` } },
+        { email: { [Op.like]: `%${nom}%` } }
+      ];
     }
 
     try {
-      const reservation = await Reservation.findOne({ where: { user_id: userId } });
+      // Pagination sécurisée
+      const pageLimit = Math.max(1, Math.min(parseInt(limit) || 10, 100));
+      const pageOffset = Math.max(0, parseInt(offset) || 0);
 
-      if (!reservation) {
-        return res.status(404).json({ error: "📛 Réservation introuvable" });
-      }
+      // Compter le total filtré
+      const total = await User.count({ where: filtre });
+      // Récupérer les utilisateurs paginés
+      const utilisateurs = await User.findAll({
+        where: filtre,
+        attributes: ["id", "nom", "prenom", "email", "role", "telephone", "actif", "createdAt", "updatedAt"],
+        order: [["nom", "ASC"]],
+        limit: pageLimit,
+        offset: pageOffset
+      });
 
-      req.auditSnapshot = reservation.toJSON(); // 👁️ état avant modification
+      // Mapper les noms de champs Sequelize vers le format attendu par le frontend
+      const formattedUsers = utilisateurs.map(user => ({
+        id: user.id,
+        nom: user.nom,
+        prenom: user.prenom,
+        email: user.email,
+        role: user.role,
+        telephone: user.telephone,
+        actif: user.actif,
+        created_at: user.createdAt,
+        updated_at: user.updatedAt
+      }));
 
-      reservation.statut = statut;
-      await reservation.save();
-
-      return res.status(200).json({
-        message: "✅ Réservation mise à jour",
-        updated: reservation // ✅ capté par autoAudit
+      return safeResponse(res, {
+        total,
+        count: utilisateurs.length,
+        offset: pageOffset,
+        limit: pageLimit,
+        utilisateurs: formattedUsers
+      }, 200, {
+        endpoint: "/api/users/registry",
+        user: req.user?.email,
+        ip: req.ip
       });
     } catch (error) {
-      console.error("❌ Erreur mise à jour réservation :", error);
-      return res.status(500).json({ error: "Erreur serveur" });
+      console.error("Erreur /registry:", error);
+      return res.status(500).json({ error: "Erreur lors de la récupération des utilisateurs" });
     }
-  }
-);
-
+  });
 
 module.exports = router;
