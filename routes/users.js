@@ -161,66 +161,29 @@ router.post("/register", authMiddleware, verifyMinimumRole("utilisateur"), async
   }
 });
 
-router.put("/update/:userId", authMiddleware,autoAudit({ action: UPDATE_USER, cibleType: "User" }), verifyRole(ROLES_USER_UPDATE),async (req, res) => {
-    const { userId } = req.params;
-    const { role, email, nom, limit, offset } = req.query;
-    // Construction du filtre dynamique pour la recherche
-    const filtre = {};
-    if (role) filtre.role = role;
-    if (email) filtre.email = { [Op.like]: `%${email}%` };
-    if (nom) {
-      // Recherche sur nom OU prénom OU email (fréquent en admin)
-      filtre[Op.or] = [
-        { nom: { [Op.like]: `%${nom}%` } },
-        { prenom: { [Op.like]: `%${nom}%` } },
-        { email: { [Op.like]: `%${nom}%` } }
-      ];
+router.put("/update/:userId", authMiddleware, autoAudit({ action: UPDATE_USER, cibleType: "User" }), verifyRole(ROLES_USER_UPDATE), async (req, res) => {
+  const { userId } = req.params;
+  try {
+    const user = await User.findByPk(userId);
+    if (!user) {
+      return res.status(404).json({ error: "Utilisateur introuvable" });
     }
-
-    try {
-      // Pagination sécurisée
-      const pageLimit = Math.max(1, Math.min(parseInt(limit) || 10, 100));
-      const pageOffset = Math.max(0, parseInt(offset) || 0);
-
-      // Compter le total filtré
-      const total = await User.count({ where: filtre });
-      // Récupérer les utilisateurs paginés
-      const utilisateurs = await User.findAll({
-        where: filtre,
-        attributes: ["id", "nom", "prenom", "email", "role", "telephone", "actif", "createdAt", "updatedAt"],
-        order: [["nom", "ASC"]],
-        limit: pageLimit,
-        offset: pageOffset
-      });
-
-      // Mapper les noms de champs Sequelize vers le format attendu par le frontend
-      const formattedUsers = utilisateurs.map(user => ({
-        id: user.id,
-        nom: user.nom,
-        prenom: user.prenom,
-        email: user.email,
-        role: user.role,
-        telephone: user.telephone,
-        actif: user.actif,
-        created_at: user.createdAt,
-        updated_at: user.updatedAt
-      }));
-
-      return safeResponse(res, {
-        total,
-        count: utilisateurs.length,
-        offset: pageOffset,
-        limit: pageLimit,
-        utilisateurs: formattedUsers
-      }, 200, {
-        endpoint: "/api/users/registry",
-        user: req.user?.email,
-        ip: req.ip
-      });
-    } catch (error) {
-      console.error("Erreur /registry:", error);
-      return res.status(500).json({ error: "Erreur lors de la récupération des utilisateurs" });
-    }
-  });
+    // Met à jour uniquement les champs présents dans req.body
+    const updatableFields = ["role", "nom", "prenom", "email", "telephone", "actif"];
+    updatableFields.forEach(field => {
+      if (req.body[field] !== undefined) {
+        user[field] = req.body[field];
+      }
+    });
+    await user.save();
+    return res.json({
+      success: true,
+      user: user.toJSON()
+    });
+  } catch (error) {
+    console.error("Erreur update user:", error);
+    return res.status(500).json({ error: "Erreur lors de la mise à jour de l'utilisateur" });
+  }
+});
 
 module.exports = router;
