@@ -166,6 +166,14 @@ app.get("/api/test-sendgrid", async (req, res) => {
 
 // ========================================
 // 📂 CHARGEMENT DES ROUTES
+// Route suppression historique
+try {
+  const clearHistoryRoutes = require('./routes/clearHistory');
+  app.use(clearHistoryRoutes);
+  console.log('✅ Route clearHistory montée');
+} catch (error) {
+  console.error('❌ ERREUR clearHistory:', error.message);
+}
 // ========================================
 // Route import utilisateurs (temporaire)
 
