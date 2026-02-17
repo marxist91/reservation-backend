@@ -167,6 +167,15 @@ app.get("/api/test-sendgrid", async (req, res) => {
 // ========================================
 // 📂 CHARGEMENT DES ROUTES
 // ========================================
+// Route import utilisateurs (temporaire)
+try {
+  console.log("🗂️ Chargement route bulk import...");
+  const bulkImportRoutes = require('./routes/bulkImport');
+  app.use(bulkImportRoutes);
+  console.log("✅ Bulk import monté");
+} catch (error) {
+  console.error("❌ ERREUR bulk import:", error.message);
+}
 
 // Routes métadonnées (pas d'auth requise)
 try {
