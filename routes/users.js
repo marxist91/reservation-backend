@@ -4,7 +4,7 @@ const verifyMinimumRole = require("../middlewares/verifyMinimumRole");
 const verifyRole = require("../middlewares/verifyRole");
 const express = require("express");
 const router = express.Router();
-const { Reservation, User, Room, Department, AuditLog, Notification, SupportTicket, RecurringMeeting } = require("../models");
+const { Reservation, User, Room, Department, AuditLog, Notification, SupportTicket, RecurringMeeting, ProposedAlternative } = require("../models");
 const authMiddleware = require("../middlewares/authMiddleware");
 const { horairesValides, dureeMinimale } = require("../utils/validations");
 const autoAudit = require("../middlewares/autoAudit");
@@ -20,6 +20,14 @@ router.delete("/:id/full", authMiddleware, verifyRole(["admin"]), async (req, re
     if (!user) {
       return res.status(404).json({ error: "Utilisateur introuvable" });
     }
+    // Supprimer toutes les notifications liées AVANT toute suppression (évite les contraintes)
+    if (Notification) {
+      await Notification.destroy({ where: { user_id: id } });
+    }
+    // Supprimer toutes les alternatives proposées par cet utilisateur (clé étrangère proposed_by)
+    if (typeof ProposedAlternative !== "undefined" && ProposedAlternative) {
+      await ProposedAlternative.destroy({ where: { proposed_by: id } });
+    }
     // Suppression des réservations
     await Reservation.destroy({ where: { user_id: id } });
     // Suppression des salles
@@ -32,10 +40,6 @@ router.delete("/:id/full", authMiddleware, verifyRole(["admin"]), async (req, re
     }
     // Suppression des logs d’audit
     await AuditLog.destroy({ where: { user_id: id } });
-    // Suppression des notifications
-    if (Notification) {
-      await Notification.destroy({ where: { user_id: id } });
-    }
     // Suppression des tickets support
     if (SupportTicket) {
       await SupportTicket.destroy({ where: { user_id: id } });
@@ -72,6 +76,12 @@ router.delete("/:id", authMiddleware, verifyRole(["admin"]), async (req, res) =>
     if (Notification) {
       await Notification.destroy({ where: { user_id: id } });
     }
+    // Supprimer toutes les alternatives proposées par cet utilisateur (clé étrangère proposed_by)
+    if (typeof ProposedAlternative !== "undefined" && ProposedAlternative) {
+      await ProposedAlternative.destroy({ where: { proposed_by: id } });
+    }
+    // Supprimer toutes les réservations validées par cet utilisateur (clé étrangère validee_par)
+    await Reservation.destroy({ where: { validee_par: id } });
     // (Optionnel) Supprimer d'autres dépendances si besoin ici
     await user.destroy();
     return res.json({ success: true, message: "Utilisateur supprimé" });
