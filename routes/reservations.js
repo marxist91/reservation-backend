@@ -371,7 +371,7 @@ router.put( "/validate/:id",authMiddleware, verifyRole(ROLES_RESERVATION_VALIDAT
               .then(() => console.log(`📧 Email de validation envoyé à ${reservation.utilisateur.email}`))
               .catch(emailError => console.error("⚠️ Erreur envoi email de validation:", emailError.message));
 
-            // Créer historique
+            // Créer historique pour l'admin/responsable (valideur)
             await History.create({
               user_id: req.user.id,
               type: 'VALIDATION',
@@ -379,6 +379,16 @@ router.put( "/validate/:id",authMiddleware, verifyRole(ROLES_RESERVATION_VALIDAT
               description: `La réservation a été validée par ${req.user.nom || 'un administrateur'}.`,
               reservation_id: reservation.id,
               details: { ancien_statut: 'en_attente', nouveau_statut: 'validee' }
+            });
+
+            // Créer historique pour l'utilisateur qui reçoit la validation
+            await History.create({
+              user_id: reservation.user_id,
+              type: 'VALIDATION',
+              action: 'Validation reçue',
+              description: `Votre réservation a été validée par ${req.user.nom || 'un administrateur'}.`,
+              reservation_id: reservation.id,
+              details: { ancien_statut: 'en_attente', nouveau_statut: 'validee', validateur_id: req.user.id, validateur_nom: req.user.nom }
             });
           } catch (bgError) {
             console.error("⚠️ Erreur notifications arrière-plan:", bgError.message);
@@ -882,7 +892,29 @@ router.post("/create", authMiddleware, verifyMinimumRole("user"), async (req, re
     });
 
     console.log("✅ Réservation créée:", nouvelleReservation.id);
-    
+
+    // Loguer l'action dans l'historique (pour admin/user)
+    try {
+      await History.create({
+        user_id,
+        type: 'CREATION',
+        action: 'Création de réservation',
+        description: `La réservation a été créée par ${req.user.nom || 'un utilisateur'}.`,
+        reservation_id: nouvelleReservation.id,
+        details: {
+          room_id,
+          date,
+          heure_debut,
+          heure_fin,
+          motif,
+          nombre_participants,
+          departmentId
+        }
+      });
+    } catch (e) {
+      console.error('Erreur création historique (History.create) :', e);
+    }
+
     // Répondre immédiatement au client AVANT d'envoyer les notifications
     res.status(201).json({
       message: "Réservation créée",
@@ -896,11 +928,11 @@ router.post("/create", authMiddleware, verifyMinimumRole("user"), async (req, re
         // - TOUS les responsables reçoivent les notifications (pas seulement celui de la salle)
         // - TOUS les admins aussi (sauf si setting suppress_admin_if_responsable_notified = true)
         // - N'importe qui peut valider n'importe quelle salle
-        
+
         const { Setting } = require('../models');
         let settings = null;
         try { settings = await Setting.getSettings(); } catch(e){ console.warn('⚠️ Impossible de lire settings:', e && e.message); }
-        
+
         const createdReservationWithDetails = await Reservation.findByPk(nouvelleReservation.id, {
           include: [
             { model: Room, as: 'salle', attributes: ['id', 'nom'] },
@@ -908,10 +940,10 @@ router.post("/create", authMiddleware, verifyMinimumRole("user"), async (req, re
             { model: require('../models').Department, as: 'department', attributes: ['id', 'name'] }
           ]
         });
-        
+
         // Rassembler les destinataires (IDs) et dédupliquer
         const recipientIds = new Set();
-        
+
         // 1. Ajouter TOUS les responsables
         const allResponsables = await User.findAll({ 
           where: { role: { [Op.in]: ['responsable', 'responsable_salle'] } } 
@@ -919,7 +951,7 @@ router.post("/create", authMiddleware, verifyMinimumRole("user"), async (req, re
         for (const r of allResponsables) {
           recipientIds.add(r.id);
         }
-        
+
         // 2. Ajouter TOUS les admins (sauf si setting désactive)
         if (!(settings && settings.suppress_admin_if_responsable_notified)) {
           const admins = await User.findAll({ where: { role: 'admin' } });
@@ -927,7 +959,7 @@ router.post("/create", authMiddleware, verifyMinimumRole("user"), async (req, re
             recipientIds.add(admin.id);
           }
         }
-        
+
         console.log(`📧 Notifications: ${recipientIds.size} destinataires (setting suppress_admin=${settings?.suppress_admin_if_responsable_notified})`);
 
         // Créer une notification unique par destinataire
@@ -973,7 +1005,7 @@ router.post("/create", authMiddleware, verifyMinimumRole("user"), async (req, re
         console.error("⚠️ Erreur notifications arrière-plan:", bgError.message);
       }
     });
-    // --- FIN NOTIFICATIONS ARRIÈRE-PLAN ---
+    // --- FIN NOTIFICATIONS EN ARRIÈRE-PLAN ---
   } catch (error) {
     console.error("âŒ Erreur POST/api/reservations/create:", error.message);
     console.error("Stack:", error.stack);
@@ -1716,60 +1748,46 @@ router.post("/create-multiple", authMiddleware, async (req, res) => {
       admins = await User.findAll({ where: { id: notifiedAdminIds }, attributes: ['id', 'email', 'prenom', 'nom'], transaction: t });
     }
 
-    // Envoi d'emails (hors transaction pour ne pas bloquer)
-    // On le fait après le commit idéalement, mais ici on prépare les données
-    // Pour simplifier, on envoie un email générique à l'utilisateur
+    // Envoi d'emails transaction commitée : confirmation à l'utilisateur et demande de validation aux admins/responsables
     try {
-        const user = await User.findByPk(userId, { transaction: t });
-        if (user && user.email) {
-            // Utilisation de sendNotification qui loggue ou envoie selon la config
-            // Note: sendNotification est asynchrone mais on ne l'attend pas forcément pour ne pas ralentir la réponse
-            // Cependant, si on veut être sûr, on peut l'attendre.
-            // Ici on utilise sendEmail directement si disponible ou sendNotification
-            
-            // On utilise sendNotification pour la cohérence avec le reste du projet
-            // Mais sendNotification semble juste logger dans un fichier pour l'instant (mode debug)
-            // Si on veut un vrai email, il faut utiliser sendEmail (services/mailer.js)
-            
-            // Envoi email utilisateur
-            sendEmail({
-                to: user.email,
-                subject: 'Confirmation de demande de réservation multiple',
-                html: `
-                    <h1>Demande enregistrée</h1>
-                    <p>Bonjour ${user.prenom} ${user.nom},</p>
-                    <p>Votre demande de réservation multiple a bien été prise en compte.</p>
-                    <p><strong>Détails :</strong></p>
-                    <ul>
-                        <li>Nombre de créneaux : ${createdReservations.length}</li>
-                        <li>Salle ID : ${room_id}</li>
-                        <li>Motif : ${motif}</li>
-                    </ul>
-                    <p>Vous recevrez une notification dès qu'elle sera traitée.</p>
-                `
-            }).catch(err => console.error("Erreur envoi email user:", err));
+      const user = await User.findByPk(userId, { transaction: t });
+      if (user && user.email) {
+        // Email confirmation à l'utilisateur
+        await emailService.sendEmail({
+          to: user.email,
+          subject: 'Confirmation de demande de réservation multiple',
+          html: `
+            <h1>Demande enregistrée</h1>
+            <p>Bonjour ${user.prenom} ${user.nom},</p>
+            <p>Votre demande de réservation multiple a bien été prise en compte.</p>
+            <p><strong>Détails :</strong></p>
+            <ul>
+                <li>Nombre de créneaux : ${createdReservations.length}</li>
+                <li>Salle ID : ${room_id}</li>
+                <li>Motif : ${motif}</li>
+            </ul>
+            <p>Vous recevrez une notification dès qu'elle sera traitée.</p>
+          `
+        });
 
-            // Envoi email aux admins (déduplication par email)
-            const adminEmails = Array.from(new Set(admins.map(a => a.email).filter(e => e)));
-            for (const email of adminEmails) {
-              sendEmail({
-                to: email,
-                subject: 'Nouvelle demande de réservation multiple',
-                html: `
-                  <h1>Nouvelle demande à valider</h1>
-                  <p>L'utilisateur ${user.prenom} ${user.nom} a fait une demande de réservation multiple.</p>
-                  <p><strong>Détails :</strong></p>
-                  <ul>
-                    <li>Nombre de créneaux : ${createdReservations.length}</li>
-                    <li>Salle ID : ${room_id}</li>
-                  </ul>
-                  <p>Merci de vous connecter pour valider ou refuser.</p>
-                `
-              }).catch(err => console.error("Erreur envoi email admin:", err));
-            }
+        // Email demande de validation à chaque admin/responsable
+        for (const admin of admins) {
+          if (admin.email) {
+            await emailService.sendNewReservationToAdmins(admin.email, {
+              userName: `${user.prenom} ${user.nom}`,
+              userEmail: user.email,
+              roomName: `Salle #${room_id}`,
+              date: dates[0] ? dates[0].toLocaleDateString('fr-FR') : '',
+              startTime: timeSlots[0]?.heure_debut || '',
+              endTime: timeSlots[timeSlots.length - 1]?.heure_fin || '',
+              motif: motif,
+              department: departmentId ? departmentId.toString() : ''
+            });
+          }
         }
+      }
     } catch (emailError) {
-        console.error("Erreur lors de la préparation des emails:", emailError);
+      console.error("Erreur lors de la préparation/envoi des emails:", emailError);
     }
 
     // Création de l'historique

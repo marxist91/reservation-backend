@@ -3,7 +3,7 @@ const { Model } = require("sequelize");
 
 module.exports = (sequelize, DataTypes) => {
   class Setting extends Model {
-    static associate(models) {
+    static associate(_models) {
       // Settings is a singleton table, no associations needed
     }
 

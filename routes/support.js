@@ -2,9 +2,8 @@ const express = require('express');
 const router = express.Router();
 const authMiddleware = require('../middlewares/authMiddleware');
 const verifyRole = require('../middlewares/verifyRole');
-const { ROLES_USER_MANAGEMENT } = require('../constants/permissions');
 const { User, Notification, SupportTicket } = require('../models');
-const { Op } = require('sequelize');
+
 
 // Constante pour les admins seulement
 const ROLES_ADMIN = ['admin'];

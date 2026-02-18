@@ -401,7 +401,7 @@ app.get('/api/test', (req, res) => {
 
 // 🚫 Middleware de gestion d'erreurs global
 // IMPORTANT: Ce middleware DOIT avoir 4 paramètres (err, req, res, next)
-app.use((err, req, res, next) => {
+app.use((err, req, res, _next) => {
   console.error('❌ Erreur globale:', err);
   
   // Log d'audit pour les erreurs critiques

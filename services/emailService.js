@@ -1171,7 +1171,7 @@ class EmailService {
     const htmlFYI = this.getAlternativeProposedFYITemplate(alternativeData);
 
     // Envoi aux admins et responsables (préférer responsables si setting activé)
-    const roomId = reservation.room_id || (reservation.salle && reservation.salle.id) || null;
+    const roomId = alternativeData.room_id || (alternativeData.salle && alternativeData.salle.id) || null;
     const adminsEmails = await this.getAdminsAndResponsablesEmails(roomId);
     if (adminsEmails.length > 0) {
       await this.sendEmail({
@@ -1211,7 +1211,7 @@ class EmailService {
     });
 
     // Envoi aux autres admins et responsables (préférer responsables si setting activé)
-    const roomId = alternativeData.room_id || (alternativeData.salle && alternativeData.salle.id) || null;
+    const roomId = acceptanceData.room_id || (acceptanceData.salle && acceptanceData.salle.id) || null;
     const adminsEmails = await this.getAdminsAndResponsablesEmails(roomId);
     const otherAdmins = adminsEmails.filter(email => email !== proposerEmail);
     if (otherAdmins.length > 0) {
