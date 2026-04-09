@@ -5,6 +5,7 @@ const { Setting, Reservation, Notification, ActionLog } = require("../models");
 const authMiddleware = require("../middlewares/authMiddleware");
 const verifyRole = require("../middlewares/verifyRole");
 const safeResponse = require("../utils/safeResponse");
+const emailService = require("../services/emailService");
 
 // GET /api/settings - Récupérer les paramètres
 router.get("/", authMiddleware, verifyRole(["admin"]), async (req, res) => {
@@ -190,6 +191,70 @@ router.delete("/clear-all-reservations", authMiddleware, verifyRole(["admin"]), 
       error: error.message
     }, 500, {
       action: "clear_all_reservations",
+      userId: req.user?.id,
+      errorMessage: error.message
+    });
+  }
+});
+
+// POST /api/settings/test-email - Envoyer un email de test
+router.post("/test-email", authMiddleware, verifyRole(["admin"]), async (req, res) => {
+  try {
+    if (!emailService.isReady()) {
+      return safeResponse(res, {
+        message: "Le service email n'est pas configuré. Vérifiez les variables EMAIL_HOST, EMAIL_PORT, EMAIL_USER et EMAIL_PASSWORD dans le fichier .env"
+      }, 400, {
+        action: "test_email",
+        userId: req.user?.id
+      });
+    }
+
+    const adminEmail = req.user.email;
+    if (!adminEmail) {
+      return safeResponse(res, { message: "Aucune adresse email associée à votre compte" }, 400, {
+        action: "test_email",
+        userId: req.user?.id
+      });
+    }
+
+    const result = await emailService.sendEmail({
+      to: adminEmail,
+      subject: "✅ Test - Système de Réservation de Salles",
+      html: emailService.getBaseTemplate({
+        title: "Email de test",
+        content: `
+          <p>Bonjour,</p>
+          <p>Ceci est un <strong>email de test</strong> envoyé depuis les paramètres du Système de Réservation de Salles du Port Autonome de Lomé.</p>
+          <p>Si vous recevez cet email, la configuration SMTP fonctionne correctement.</p>
+          <p style="color: #666; font-size: 13px; margin-top: 20px;">
+            Envoyé le ${new Date().toLocaleString('fr-FR')} par ${req.user.nom || req.user.email}
+          </p>
+        `,
+      }),
+    });
+
+    if (result) {
+      return safeResponse(res, {
+        message: `Email de test envoyé avec succès à ${adminEmail}`
+      }, 200, {
+        action: "test_email",
+        userId: req.user?.id
+      });
+    } else {
+      return safeResponse(res, {
+        message: "L'envoi de l'email a échoué. Vérifiez la configuration SMTP et les logs du serveur."
+      }, 500, {
+        action: "test_email",
+        userId: req.user?.id
+      });
+    }
+  } catch (error) {
+    console.error("❌ Erreur envoi email de test:", error);
+    return safeResponse(res, {
+      message: "Erreur lors de l'envoi de l'email de test",
+      error: error.message
+    }, 500, {
+      action: "test_email",
       userId: req.user?.id,
       errorMessage: error.message
     });
